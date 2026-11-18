@@ -10,6 +10,8 @@ import stat
 import sys
 from pathlib import Path
 
+from network_policy import resolve_allowed_hosts, sync_task_toml
+
 ROOT = Path(__file__).resolve().parent.parent
 SKELETON = ROOT / "templates" / "task-skeleton"
 
@@ -48,6 +50,7 @@ def main() -> int:
     toml_text = toml_text.replace('category = "security"', f'category = "{args.category}"')
     toml_text = toml_text.replace('tags = ["security"]', f"tags = [{tags_toml}]")
     toml_path.write_text(toml_text, encoding="utf-8")
+    sync_task_toml(toml_path, resolve_allowed_hosts())
 
     make_executable(dest / "solution" / "solve.sh")
     make_executable(dest / "tests" / "test.sh")

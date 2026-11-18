@@ -29,7 +29,9 @@ VulnHunter/
 ├── templates/
 │   └── task-skeleton/                  # 新建测试题标准零提示模板
 └── scripts/
+    ├── network_policy.py               # 从环境变量 / .env 解析并同步白名单域名至 task.toml
     ├── new_task.py                     # 快速生成新题目录脚手架
+    ├── run_harbor.sh                   # 自动加载 .env、同步白名单并启动 harbor
     └── validate_suite.py               # 静态检查 + 零提示违禁词扫描 + 本地 Oracle 自检（0.0 -> 1.0）
 ```
 
@@ -56,21 +58,21 @@ harbor run --config configs/oracle_check.yaml
 
 ### 3. 使用各厂商官方 Agent Harness 开启评测
 
-导出对应厂商 API Key 后启动：
+支持直接在 `.env`（参考 `.env.example`）或环境变量中配置 API Key，以及通过 `VULNHUNTER_EXTRA_ALLOWED_HOSTS` 或 `ANTHROPIC_BASE_URL` / `OPENAI_BASE_URL` / `GOOGLE_GEMINI_BASE_URL` 额外放行自定义反代/网关 URL：
 
 ```bash
-export ANTHROPIC_API_KEY="sk-ant-..."
-export OPENAI_API_KEY="sk-..."
-export GEMINI_API_KEY="AIza..."
+cp .env.example .env
+# 编辑 .env 填入 API Key；若使用自建网关/反代，填入对应 *_BASE_URL 或 VULNHUNTER_EXTRA_ALLOWED_HOSTS
 
-# 方式 A：单独评测某一家官方 CLI
+# 方式 A：通过封装脚本启动（自动加载 .env、将额外放行 URL 同步写入 task.toml 并执行 harbor）
+./scripts/run_harbor.sh run --config configs/official_harnesses.yaml
+
+# 方式 B：单独评测某一家官方 CLI（手动同步 .env 白名单后调用 harbor）
+python3 scripts/network_policy.py
 harbor run -p datasets/vulnhunter-core \
   --agent claude-code \
   --model anthropic/claude-sonnet-4-5 \
   --n-concurrent 2
-
-# 方式 B：一键跑 Claude Code / Codex CLI / Gemini CLI 横向对比
-harbor run --config configs/official_harnesses.yaml
 ```
 
 ---

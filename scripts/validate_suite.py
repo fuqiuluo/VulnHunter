@@ -13,14 +13,11 @@ import tempfile
 import tomllib
 from pathlib import Path
 
+from network_policy import resolve_allowed_hosts
+
 ROOT = Path(__file__).resolve().parent.parent
 REQUIRED_SECTIONS = ("metadata", "verifier", "agent", "environment")
 FORBIDDEN_ENV_NAMES = {".git", "solve.sh", "reward.txt"}
-ALLOWED_INFERENCE_HOSTS = {
-    "api.anthropic.com",
-    "api.openai.com",
-    "generativelanguage.googleapis.com",
-}
 
 # Giveaway terms forbidden in instruction.md and task directory names so models must analyze blindly
 FORBIDDEN_HINT_PATTERNS = [
@@ -54,7 +51,8 @@ def check_zero_hint(text: str, label: str) -> list[str]:
     return hits
 
 
-def validate_task_static(task_dir: Path) -> list[str]:
+def validate_task_static(task_dir: Path, allowed_hosts: set[str] | None = None) -> list[str]:
+    permitted_hosts = allowed_hosts if allowed_hosts is not None else set(resolve_allowed_hosts())
     errors: list[str] = []
     toml_file = task_dir / "task.toml"
     instr_file = task_dir / "instruction.md"
@@ -92,10 +90,11 @@ def validate_task_static(task_dir: Path) -> list[str]:
             if not isinstance(hosts, list) or not hosts:
                 errors.append("task.toml [agent] with network_mode = 'allowlist' must declare non-empty allowed_hosts")
             else:
-                unauthorized = [h for h in hosts if h not in ALLOWED_INFERENCE_HOSTS]
+                unauthorized = [h for h in hosts if h not in permitted_hosts]
                 if unauthorized:
                     errors.append(
-                        f"task.toml [agent].allowed_hosts contains unauthorized internet host(s): {unauthorized}"
+                        f"task.toml [agent].allowed_hosts contains unauthorized internet host(s): {unauthorized} "
+                        "(add extra URLs/hosts via VULNHUNTER_EXTRA_ALLOWED_HOSTS or *_BASE_URL in .env)"
                     )
 
         verifier_cfg = cfg.get("verifier", {})
@@ -198,6 +197,7 @@ def discover_tasks(datasets_root: Path) -> list[Path]:
 def main() -> int:
     parser = argparse.ArgumentParser(description="Validate VulnHunter benchmark tasks.")
     parser.add_argument("--datasets-dir", default=str(ROOT / "datasets"))
+    parser.add_argument("--env-file", default=str(ROOT / ".env"), help="Path to .env file for extra allowed URLs")
     parser.add_argument(
         "--local-oracle",
         action="store_true",
@@ -205,6 +205,7 @@ def main() -> int:
     )
     args = parser.parse_args()
 
+    permitted_hosts = set(resolve_allowed_hosts(Path(args.env_file)))
     tasks = discover_tasks(Path(args.datasets_dir))
     if not tasks:
         print("No tasks found.", file=sys.stderr)
@@ -213,7 +214,7 @@ def main() -> int:
     failed = 0
     for task_dir in tasks:
         rel = task_dir.relative_to(ROOT)
-        errs = validate_task_static(task_dir)
+        errs = validate_task_static(task_dir, allowed_hosts=permitted_hosts)
         if not errs and args.local_oracle:
             errs = run_local_oracle(task_dir)
 
