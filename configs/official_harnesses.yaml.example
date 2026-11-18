@@ -1,0 +1,48 @@
+# Harbor JobConfig Example: Benchmark official & custom CLI harnesses side-by-side
+# Copy to `configs/official_harnesses.yaml` (gitignored) and fill in your credentials/endpoints:
+#   cp configs/official_harnesses.yaml.example configs/official_harnesses.yaml
+#   ./scripts/run_harbor.sh run --config configs/official_harnesses.yaml
+
+job_name: vulnhunter-official-harnesses
+jobs_dir: "jobs"
+n_concurrent_trials: 2
+n_attempts: 1
+
+datasets:
+  - path: "datasets/vulnhunter-core"
+
+agents:
+  # 1. GLM via official Claude Code CLI (`claude` binary + custom Anthropic-compatible gateway)
+  #    Remember to also add the gateway host to VULNHUNTER_EXTRA_ALLOWED_HOSTS in .env
+  - name: claude-code
+    model_name: anthropic/glm-4.6
+    env:
+      ANTHROPIC_BASE_URL: "https://open.bigmodel.cn/api/anthropic"
+      ANTHROPIC_API_KEY: "your-glm-api-key"
+      CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC: "1"
+
+  # 2. Claude Opus via enterprise-customized `qlaude` binary
+  #    `preload` copies ~/.qlaude/ (containing qlaude + cached official claude) from host into container
+  - import_path: "harnesses.custom_claude:CustomClaudeCode"
+    model_name: anthropic/claude-opus-4-6
+    env:
+      CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC: "1"
+    kwargs:
+      binary_name: "qlaude"
+      skip_install: true
+      preload:
+        - "upload ~/.qlaude /root/.qlaude"
+        - "chmod -R a+rx /root/.qlaude"
+        - "ln -sf /root/.qlaude/qlaude /usr/local/bin/qlaude"
+
+  # 3. OpenAI official Codex CLI harness
+  - name: codex
+    model_name: openai/gpt-5-codex
+
+  # 4. Google official Gemini CLI harness
+  - name: gemini-cli
+    model_name: gemini/gemini-2.5-pro
+
+environment:
+  type: docker
+  delete: true

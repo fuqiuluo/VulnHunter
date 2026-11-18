@@ -97,21 +97,49 @@ def extract_host_entry(raw_token: str) -> str:
     return token.strip().lower()
 
 
+def parse_yaml_base_urls(yaml_file: Path) -> list[str]:
+    """Extract *_BASE_URL or *EXTRA_ALLOWED_HOSTS values from a local Harbor YAML config without PyYAML."""
+    if not yaml_file.is_file():
+        return []
+    found: list[str] = []
+    key_group = "|".join(re.escape(k) for k in EXTRA_HOST_ENV_KEYS)
+    pat = re.compile(rf"^\s*(?:{key_group})\s*:\s*(.+?)\s*$")
+    for raw_line in yaml_file.read_text(encoding="utf-8").splitlines():
+        stripped = raw_line.strip()
+        if not stripped or stripped.startswith("#"):
+            continue
+        m = pat.match(raw_line)
+        if not m:
+            continue
+        val = m.group(1).strip()
+        if len(val) >= 2 and val[0] == val[-1] and val[0] in ("'", '"'):
+            val = val[1:-1]
+        else:
+            val = re.sub(r"\s+#.*$", "", val).strip()
+        if val and not val.startswith("$"):
+            found.append(val)
+    return found
+
+
 def resolve_allowed_hosts(
     env_file: Path | None = None,
     environ: Mapping[str, str] | None = None,
+    harnesses_yaml: Path | None = None,
 ) -> list[str]:
-    """Return DEFAULT_ALLOWED_HOSTS plus any extra hosts configured in .env and process env."""
+    """Return DEFAULT_ALLOWED_HOSTS plus any extra hosts configured in .env, YAML, and process env."""
     merged_env: dict[str, str] = {}
     dotenv_path = env_file if env_file is not None else (ROOT / ".env")
+    yaml_path = harnesses_yaml if harnesses_yaml is not None else (ROOT / "configs" / "official_harnesses.yaml")
     merged_env.update(parse_dotenv(dotenv_path))
     merged_env.update(environ if environ is not None else os.environ)
 
     hosts: list[str] = list(DEFAULT_ALLOWED_HOSTS)
     seen: set[str] = set(hosts)
 
-    for key in EXTRA_HOST_ENV_KEYS:
-        raw_val = merged_env.get(key, "").strip()
+    raw_sources: list[str] = [merged_env.get(key, "").strip() for key in EXTRA_HOST_ENV_KEYS]
+    raw_sources.extend(parse_yaml_base_urls(yaml_path))
+
+    for raw_val in raw_sources:
         if not raw_val:
             continue
         for part in re.split(r"[,;\s]+", raw_val):

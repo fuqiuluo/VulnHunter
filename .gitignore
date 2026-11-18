@@ -14,8 +14,9 @@ build/
 core
 core.*
 
-# IDE & OS
+# IDE & OS & Local Secrets
 .idea/
 .openidea/
 .DS_Store
 .env
+configs/official_harnesses.yaml
