@@ -16,6 +16,11 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parent.parent
 REQUIRED_SECTIONS = ("metadata", "verifier", "agent", "environment")
 FORBIDDEN_ENV_NAMES = {".git", "solve.sh", "reward.txt"}
+ALLOWED_INFERENCE_HOSTS = {
+    "api.anthropic.com",
+    "api.openai.com",
+    "generativelanguage.googleapis.com",
+}
 
 # Giveaway terms forbidden in instruction.md and task directory names so models must analyze blindly
 FORBIDDEN_HINT_PATTERNS = [
@@ -73,6 +78,32 @@ def validate_task_static(task_dir: Path) -> list[str]:
     for sec in REQUIRED_SECTIONS:
         if sec not in cfg:
             errors.append(f"task.toml missing [{sec}] section")
+
+    if not errors:
+        agent_cfg = cfg.get("agent", {})
+        agent_net = agent_cfg.get("network_mode")
+        if agent_net not in ("allowlist", "no-network"):
+            errors.append(
+                "task.toml [agent] must set network_mode = 'allowlist' or 'no-network' "
+                "(internet access during evaluation is forbidden; see templates/task-skeleton/task.toml)"
+            )
+        elif agent_net == "allowlist":
+            hosts = agent_cfg.get("allowed_hosts")
+            if not isinstance(hosts, list) or not hosts:
+                errors.append("task.toml [agent] with network_mode = 'allowlist' must declare non-empty allowed_hosts")
+            else:
+                unauthorized = [h for h in hosts if h not in ALLOWED_INFERENCE_HOSTS]
+                if unauthorized:
+                    errors.append(
+                        f"task.toml [agent].allowed_hosts contains unauthorized internet host(s): {unauthorized}"
+                    )
+
+        verifier_cfg = cfg.get("verifier", {})
+        if verifier_cfg.get("network_mode") != "no-network":
+            errors.append(
+                "task.toml [verifier] must set network_mode = 'no-network' "
+                "(see templates/task-skeleton/task.toml)"
+            )
 
     instr_text = instr_file.read_text(encoding="utf-8")
     if len(instr_text.strip()) < 20:

@@ -16,5 +16,6 @@ core.*
 
 # IDE & OS
 .idea/
+.openidea/
 .DS_Store
 .env

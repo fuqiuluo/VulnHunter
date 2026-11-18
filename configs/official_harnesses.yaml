@@ -15,15 +15,17 @@ datasets:
   - path: "datasets/vulnhunter-core"
 
 agents:
-  # Anthropic official Claude Code CLI harness
+  # Anthropic official Claude Code CLI harness (non-essential traffic disabled; WebSearch/WebFetch blocked in container)
   - name: claude-code
     model_name: anthropic/claude-sonnet-4-5
+    env:
+      CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC: "1"
 
-  # OpenAI official Codex CLI harness
+  # OpenAI official Codex CLI harness (web_search locked to "disabled" via /etc/codex/requirements.toml)
   - name: codex
     model_name: openai/gpt-5-codex
 
-  # Google official Gemini CLI harness
+  # Google official Gemini CLI harness (google_web_search & web_fetch excluded via /etc/gemini-cli/settings.json)
   - name: gemini-cli
     model_name: gemini/gemini-2.5-pro
 

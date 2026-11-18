@@ -10,6 +10,7 @@
 1. **`instruction.md` 严禁剧透**：提示词不出现 `漏洞 / bug / vulnerability / exploit / overflow / SSRF / CWE` 等任何暗示词，只要求模型对 `/app` 开展全面分析并按统一契约交付分析报告（`report.json`）、验证样本/单测与代码改进。
 2. **目录名与源码去特征化**：题目目录采用中性业务模块命名（如 `c-telemetry-parser`、`py-webhook-preview`），待测源码不含提示性注释或显眼的异常类名；真实 CWE 标签仅保存在宿主机侧 `task.toml` 的 `[metadata]` 中，容器内不可见。
 3. **判分与答案物理隔离**：`solution/` 与 `tests/` 在被测 Agent 运行期间完全不在容器内，仅在 Agent 退出后由 Harbor 挂载执行。
+4. **全程断网与禁搜隔离**：Agent 运行阶段通过 `network_mode = "allowlist"` 仅放行模型推理 API 域名，拦截容器外网访问；同时在容器 `/etc/` 系统级配置中强制禁用 Claude Code（`WebSearch`/`WebFetch`）、Codex CLI（`web_search`）、Gemini CLI（`google_web_search`/`web_fetch`）内置联网工具；判分阶段（`[verifier]`）强制设为 `network_mode = "no-network"` 完全断网执行。
 
 ---
 
