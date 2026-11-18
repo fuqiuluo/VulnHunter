@@ -20,9 +20,9 @@
 VulnHunter/
 ├── configs/
 │   ├── oracle_check.yaml               # 批量运行内置 oracle 校验所有题目自身可解（期望全 1.0）
-│   └── official_harnesses.yaml.example # 横向评测配置模板（复制为 official_harnesses.yaml 本地使用，不入库）
+│   └── official_harnesses.example.yaml # 横向评测配置模板（复制为 official_harnesses.yaml 本地使用，不入库）
 ├── harnesses/
-│   └── custom_claude.py                # 自定义 Claude Code 适配器（支持自定义二进制名如 qlaude 及 preload 拷贝命令）
+│   └── custom_claude.py                # 自定义 Claude Code 适配器（支持自定义二进制名如 claude-2.1.322 及 preload 拷贝命令）
 ├── datasets/
 │   └── vulnhunter-core/                # 核心能力测试集目录
 │       ├── c-telemetry-parser/         # 示例题 1：C 遥测帧解析模块盲审
@@ -64,9 +64,9 @@ harbor run --config configs/oracle_check.yaml
 
 ```bash
 cp .env.example .env
-cp configs/official_harnesses.yaml.example configs/official_harnesses.yaml
+cp configs/official_harnesses.example.yaml configs/official_harnesses.yaml
 # 编辑 .env 与 configs/official_harnesses.yaml（两者均已在 .gitignore 忽略，不会提交本地密钥或企业定制配置）
-# 支持通过 harnesses.custom_claude:CustomClaudeCode 自定义 binary_name（如 qlaude）与 preload（如 upload ~/.qlaude /root/.qlaude）
+# 支持通过 harnesses.custom_claude:CustomClaudeCode 自定义 binary_name（如 claude-2.1.322）与 preload（如 upload ~/.claude-2.1.322 /root/.claude-2.1.322）
 
 # 方式 A：通过封装脚本启动（自动加载 .env、提取白名单域名同步至 task.toml 并执行 harbor）
 ./scripts/run_harbor.sh run --config configs/official_harnesses.yaml

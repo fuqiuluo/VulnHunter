@@ -85,7 +85,7 @@ def _build_options_model(base_cls: Any) -> Any:
                     "preload": list[str] | str | None,
                     "skip_install": bool,
                 },
-                "binary_name": Field(default="claude", description="CLI binary name to invoke (e.g. qlaude)"),
+                "binary_name": Field(default="claude", description="CLI binary name to invoke (e.g. claude-2.1.322)"),
                 "preload": Field(
                     default=None,
                     description="Ordered preload directives ('upload <host_src> <container_dst>', 'host: <cmd>', or container shell cmd)",
@@ -101,7 +101,7 @@ def _build_options_model(base_cls: Any) -> Any:
 
 
 class CustomClaudeCode(_HarborClaudeCode):
-    """Harbor ClaudeCode wrapper supporting custom binary names (e.g. `qlaude`) and `preload` hooks."""
+    """Harbor ClaudeCode wrapper supporting custom binary names (e.g. `claude-2.1.322`) and `preload` hooks."""
 
     options_model = _build_options_model(_HarborClaudeCode)
 
@@ -138,7 +138,11 @@ class CustomClaudeCode(_HarborClaudeCode):
             if "skip_install" in extracted
             else (getattr(opts, "skip_install", False) if opts is not None else kwargs.get("skip_install", False))
         )
-        self._extra_paths: list[str] = ["/root/.qlaude", "/root/.qlaude/bin", "/usr/local/bin"]
+        self._extra_paths: list[str] = [
+            f"/root/.{self._binary_name}",
+            f"/root/.{self._binary_name}/bin",
+            "/usr/local/bin",
+        ]
 
     async def _upload_host_path(self, environment: Any, raw_src: str, container_dst: str) -> None:
         host_src = Path(os.path.expanduser(os.path.expandvars(raw_src))).resolve()
@@ -191,7 +195,7 @@ class CustomClaudeCode(_HarborClaudeCode):
                         f"Container preload command failed ({payload[0]!r}): {getattr(res, 'stderr', '')}"
                     )
 
-        # Ensure WebSearch/WebFetch lockdown also covers custom Claude wrappers (e.g. /etc/qlaude)
+        # Ensure WebSearch/WebFetch lockdown also covers custom Claude wrappers (e.g. /etc/claude-2.1.322)
         if self._binary_name != "claude":
             cfg_dir = f"/etc/{re.sub(r'[^a-zA-Z0-9_-]', '', self._binary_name)}"
             await environment.exec(
