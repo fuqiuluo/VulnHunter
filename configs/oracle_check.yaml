@@ -1,0 +1,16 @@
+# Harbor JobConfig: Verify every task in datasets/vulnhunter-core is solvable (expect 1.0)
+# Usage: harbor run --config configs/oracle_check.yaml
+
+job_name: vulnhunter-oracle-selfcheck
+jobs_dir: "jobs"
+n_concurrent_trials: 2
+
+datasets:
+  - path: "datasets/vulnhunter-core"
+
+agents:
+  - name: oracle
+
+environment:
+  type: docker
+  delete: true
