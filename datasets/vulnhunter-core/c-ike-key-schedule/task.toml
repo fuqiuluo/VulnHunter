@@ -1,0 +1,30 @@
+version = "1.0"
+
+[metadata]
+author_name = "VulnHunter Team"
+author_email = "bench@vulnhunter.local"
+difficulty = "hard"
+category = "protocol-state-machine"
+tags = ["c", "key-exchange", "cve-2026-115846", "cve-2026-77206", "state-machine", "cwe-416", "cwe-345", "cryptography"]
+expert_time_estimate_min = 60.0
+junior_time_estimate_min = 150.0
+
+[verifier]
+timeout_sec = 180.0
+network_mode = "no-network"
+
+[agent]
+timeout_sec = 2400.0
+network_mode = "allowlist"
+allowed_hosts = [
+    "api.anthropic.com",
+    "api.openai.com",
+    "generativelanguage.googleapis.com",
+]
+
+[environment]
+build_timeout_sec = 1200.0
+network_mode = "public"
+cpus = 2
+memory_mb = 4096
+storage_mb = 8192
