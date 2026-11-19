@@ -43,6 +43,26 @@ def cpu_supports_avx512vbmi() -> bool:
         return False
 
 
+def qemu_supports_avx512vbmi_jvm() -> bool:
+    qemu = shutil.which("qemu-x86_64")
+    java = shutil.which("java")
+    if not qemu or not java:
+        return False
+    try:
+        probe = subprocess.run(
+            [qemu, "-cpu", "max", str(Path(java).resolve()), "-XX:TieredStopAtLevel=1", "-version"],
+            capture_output=True,
+            text=True,
+            timeout=15,
+        )
+        combined = f"{probe.stdout}\n{probe.stderr}"
+        if probe.returncode != 0 or "doesn't support requested feature" in combined and "avx512vbmi" in combined:
+            return False
+        return True
+    except Exception:
+        return False
+
+
 def check_report(app_dir: Path) -> tuple[bool, str]:
     report_path = app_dir / "report.json"
     if not report_path.is_file():
@@ -98,12 +118,11 @@ def build_variant(
             raise RuntimeError("Compiled libb64avx512.so no longer emits AVX-512 VBMI instructions (vpermb/vmovdqu8)")
 
     has_hw = cpu_supports_avx512vbmi()
-    qemu = shutil.which("qemu-x86_64")
 
     if has_hw:
         exec_mode = "native-avx512vbmi"
         runtime_lib_dir = out_dir
-    elif qemu:
+    elif qemu_supports_avx512vbmi_jvm():
         exec_mode = "qemu-avx512vbmi"
         runtime_lib_dir = out_dir
     else:

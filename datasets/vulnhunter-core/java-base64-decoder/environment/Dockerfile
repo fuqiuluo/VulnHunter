@@ -8,12 +8,13 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     make \
     gdb \
     binutils \
-    qemu-user \
     python3 \
     ca-certificates \
     curl \
     git \
     && rm -rf /var/lib/apt/lists/*
+
+COPY avx512_host_compat.h /usr/local/include/avx512_host_compat.h
 
 # Disable built-in web search/fetch tools across vendor CLI harnesses
 RUN mkdir -p /etc/claude-code /etc/codex /etc/gemini-cli \

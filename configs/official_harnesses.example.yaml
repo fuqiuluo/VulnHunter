@@ -20,6 +20,8 @@ agents:
       ANTHROPIC_BASE_URL: "https://open.bigmodel.cn/api/anthropic"
       ANTHROPIC_API_KEY: "your-glm-api-key"
       CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC: "1"
+    kwargs:
+      reasoning_effort: "max"
 
   # 2. Claude Opus via enterprise-customized `claude-2.1.322` binary
   #    `preload` copies ~/.claude-2.1.322/ (containing claude-2.1.322 + cached official claude) from host into container
@@ -30,6 +32,7 @@ agents:
     kwargs:
       binary_name: "claude-2.1.322"
       skip_install: true
+      reasoning_effort: "xhigh"
       preload:
         - "upload ~/.claude-2.1.322 /root/.claude-2.1.322"
         - "chmod -R a+rx /root/.claude-2.1.322"
@@ -38,6 +41,8 @@ agents:
   # 3. OpenAI official Codex CLI harness
   - name: codex
     model_name: openai/gpt-5-codex
+    kwargs:
+      reasoning_effort: "xhigh"
 
   # 4. Google official Gemini CLI harness
   - name: gemini-cli

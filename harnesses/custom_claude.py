@@ -205,12 +205,29 @@ class CustomClaudeCode(_HarborClaudeCode):
                 f"&& chmod 0444 {shlex.quote(cfg_dir)}/managed-settings.json"
             )
 
+    def get_version_command(self) -> str | None:
+        if self._binary_name == "claude":
+            return super().get_version_command()  # type: ignore[misc]
+        prefix = ":".join(shlex.quote(p) for p in self._extra_paths)
+        return f'export PATH={prefix}:"$HOME/.local/bin:$PATH"; {shlex.quote(self._binary_name)} --version'
+
+    def _resolve_auth_env(self) -> dict[str, str]:
+        resolved: dict[str, str] = super()._resolve_auth_env()  # type: ignore[misc]
+        if self._binary_name != "claude" and resolved.get("ANTHROPIC_AUTH_TOKEN") == "":
+            resolved = {k: v for k, v in resolved.items() if k != "ANTHROPIC_AUTH_TOKEN"}
+        return resolved
+
     async def setup(self, environment: Any) -> None:
         await self._run_preload(environment)
         if not self._skip_install:
-            await super().setup(environment)
+            wrapped_env = _CommandRewriteEnvironment(environment, self._binary_name, self._extra_paths)
+            await super().setup(wrapped_env)
         else:
+            if hasattr(self, "logs_dir") and isinstance(getattr(self, "logs_dir"), Path):
+                (self.logs_dir / "setup").mkdir(parents=True, exist_ok=True)
             await environment.exec("mkdir -p /installed-agent /logs/agent")
+            if hasattr(self, "_detect_version"):
+                self._version = await self._detect_version(environment)
 
     def create_run_agent_commands(self, instruction: str) -> list[Any]:
         """Compatibility hook for Harbor versions using `create_run_agent_commands`."""

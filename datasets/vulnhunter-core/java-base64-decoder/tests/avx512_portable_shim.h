@@ -18,6 +18,9 @@ struct alignas(64) __m512i {
     uint8_t u8[64];
 };
 
+static inline __mmask64 _cvtu64_mask64(uint64_t a) { return a; }
+static inline uint64_t _cvtmask64_u64(__mmask64 a) { return a; }
+
 static inline __m512i _mm512_load_si512(const void *mem_addr) {
     __m512i r;
     memcpy(r.u8, mem_addr, 64);
@@ -46,6 +49,12 @@ static inline void _mm512_mask_storeu_epi8(void *mem_addr, __mmask64 k, __m512i 
             p[i] = a.u8[i];
         }
     }
+}
+
+static inline __m512i _mm512_set1_epi8(char val) {
+    __m512i r;
+    memset(r.u8, static_cast<unsigned char>(val), 64);
+    return r;
 }
 
 static inline __m512i _mm512_set1_epi32(int val) {
@@ -94,6 +103,16 @@ static inline __mmask64 _mm512_movepi8_mask(__m512i a) {
     __mmask64 m = 0;
     for (int i = 0; i < 64; i++) {
         if (a.u8[i] & 0x80) {
+            m |= (1ULL << i);
+        }
+    }
+    return m;
+}
+
+static inline __mmask64 _mm512_cmpeq_epi8_mask(__m512i a, __m512i b) {
+    __mmask64 m = 0;
+    for (int i = 0; i < 64; i++) {
+        if (a.u8[i] == b.u8[i]) {
             m |= (1ULL << i);
         }
     }

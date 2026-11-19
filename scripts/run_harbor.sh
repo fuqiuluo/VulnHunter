@@ -5,6 +5,9 @@ set -euo pipefail
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 ENV_FILE="${ENV_FILE:-$ROOT_DIR/.env}"
 export PYTHONPATH="${ROOT_DIR}${PYTHONPATH:+:$PYTHONPATH}"
+if [[ -d "$ROOT_DIR/.venv/bin" ]]; then
+    export PATH="$ROOT_DIR/.venv/bin:$PATH"
+fi
 
 if [[ -f "$ENV_FILE" ]]; then
     set -a
