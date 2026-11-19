@@ -1,4 +1,4 @@
-FROM python:3.12-slim
+FROM ubuntu:24.04
 
 ENV DEBIAN_FRONTEND=noninteractive \
     LANG=C.UTF-8 \
@@ -43,6 +43,15 @@ RUN mkdir -p /etc/claude-code /etc/codex /etc/gemini-cli \
     && printf '%s\n' '{"excludeTools":["google_web_search","web_fetch"]}' > /etc/gemini-cli/settings.json \
     && printf '%s\n' '{"excludeTools":["google_web_search","web_fetch"]}' > /etc/gemini-cli/system-defaults.json \
     && chmod 0444 /etc/claude-code/managed-settings.json /etc/codex/config.toml /etc/codex/requirements.toml /etc/gemini-cli/settings.json /etc/gemini-cli/system-defaults.json
+
+RUN apt-get -o Acquire::Retries=5 -o Acquire::http::Timeout=30 update \
+    && apt-get -o Acquire::Retries=5 -o Acquire::http::Timeout=30 install -y --no-install-recommends \
+        build-essential \
+        gdb \
+        python3 \
+    && rm -rf /var/lib/apt/lists/*
+
+RUN ln -sf /usr/bin/python3 /usr/local/bin/python
 
 WORKDIR /app
 COPY app/ /app/

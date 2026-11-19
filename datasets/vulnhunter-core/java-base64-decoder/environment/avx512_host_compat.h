@@ -2,6 +2,13 @@
 #define AVX512_HOST_COMPAT_H
 
 #define _IMMINTRIN_H_INCLUDED
+#define VULNHUNTER_AVX512_SHIM 1
+#include <algorithm>
+#include <cstddef>
+#include <cstdint>
+#include <cstdlib>
+#include <cstring>
+#include <limits>
 #include <stdint.h>
 #include <string.h>
 #include <x86gprintrin.h>
@@ -140,5 +147,9 @@ static inline __m512i _mm512_madd_epi16(__m512i a, __m512i b) {
     }
     return r;
 }
+
+#ifndef __builtin_cpu_supports
+#define __builtin_cpu_supports(feat) (1)
+#endif
 
 #endif /* AVX512_HOST_COMPAT_H */

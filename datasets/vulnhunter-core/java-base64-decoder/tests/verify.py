@@ -133,10 +133,34 @@ def build_variant(
         exec_mode = "bmi2-portable-shim"
         shim_dir = out_dir / "portable_lib"
         shim_dir.mkdir(parents=True, exist_ok=True)
+        extra_defines: list[str] = []
+        makefile_path = codec_java_dir.parent.parent / "Makefile"
+        if makefile_path.is_file():
+            mk_text = makefile_path.read_text(encoding="utf-8", errors="replace")
+            for m in re.finditer(r"(?:^|\s)(-D[A-Za-z_][A-Za-z0-9_]*(?:=[^\s\\]+)?)", mk_text):
+                flag = m.group(1)
+                if flag not in extra_defines:
+                    extra_defines.append(flag)
+        raw_cpp = native_cpp.read_text(encoding="utf-8")
+        sanitized_cpp = re.sub(
+            r"__attribute__\s*\(\(\s*target\s*\([^)]*avx512[^)]*\)\s*\)\)",
+            "",
+            raw_cpp,
+            flags=re.IGNORECASE,
+        )
+        sanitized_cpp = re.sub(
+            r"\[\[\s*(?:gnu::)?target\s*\([^)]*avx512[^)]*\)\s*\]\]",
+            "",
+            sanitized_cpp,
+            flags=re.IGNORECASE,
+        )
+        shim_src = shim_dir / "base64_avx512_shim.cpp"
+        shim_src.write_text(sanitized_cpp, encoding="utf-8")
         cmd_shim = [
-            "g++", "-O2", "-shared", "-fPIC", "-mbmi2",
+            "g++", "-O2", "-Wno-psabi", "-shared", "-fPIC", "-mbmi2",
+            *extra_defines,
             "-include", str(shim_header),
-            *jni_inc, str(native_cpp), "-o", str(shim_dir / "libb64avx512.so"),
+            *jni_inc, str(shim_src), "-o", str(shim_dir / "libb64avx512.so"),
         ]
         res_shim = subprocess.run(cmd_shim, capture_output=True, text=True)
         if res_shim.returncode != 0:
