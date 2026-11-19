@@ -13,26 +13,7 @@ cat > "$APP_DIR/report.json" <<'EOF'
 }
 EOF
 
-# 2. Generate SBRK handshake stream setting USER='-f root' via SB_OPT_SESSION_ENV
-python3 - "$APP_DIR/sample.bin" <<'PY'
-import struct
-import sys
-
-MAGIC = 0x5342524B  # "SBRK"
-SB_CTL_ESC = 0xFE
-SB_CTL_SUB_BEGIN = 0xF0
-SB_CTL_SUB_END = 0xF1
-SB_OPT_SESSION_ENV = 0x27
-
-header = struct.pack("<IIII", MAGIC, 1001, 0, 0)
-env_payload = b"\x00" + b"USER" + b"\x01" + b"-f root"
-subopt = bytes([SB_CTL_ESC, SB_CTL_SUB_BEGIN, SB_OPT_SESSION_ENV]) + env_payload + bytes([SB_CTL_ESC, SB_CTL_SUB_END])
-
-with open(sys.argv[1], "wb") as f:
-    f.write(header + subopt)
-PY
-
-# 3. Harden include/session_broker.h and src/template.c with strict token validation and '--' option termination
+# 2. Harden include/session_broker.h and src/template.c with strict token validation and '--' option termination
 python3 - "$APP_DIR/include/session_broker.h" <<'PY'
 import sys
 p = sys.argv[1]

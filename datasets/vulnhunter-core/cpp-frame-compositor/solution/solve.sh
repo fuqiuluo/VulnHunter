@@ -13,31 +13,7 @@ cat > "$APP_DIR/report.json" <<'EOF'
 }
 EOF
 
-# 2. Generate FDEC binary stream triggering heap OOB write on original compositor
-python3 - "$APP_DIR/sample.bin" <<'PY'
-import struct
-import sys
-
-MAGIC = 0x43454446  # "FDEC"
-# Canvas 4x4, grid 2x1, tile 4x2, 2 tiles
-header = struct.pack("<IiiiiiiI", MAGIC, 4, 4, 2, 1, 4, 2, 2)
-
-def pack_tile(w, h, stride, slice_h, has_crop, cl, ct, cr, cb, fill=0x41):
-    y_len = stride * (slice_h if slice_h > 0 else h)
-    uv_len = (stride // 2) * (((slice_h if slice_h > 0 else h) + 1) // 2)
-    payload = bytes([fill]) * (y_len + 2 * uv_len)
-    return struct.pack("<iiiiIiiiiI", w, h, stride, slice_h, 1 if has_crop else 0, cl, ct, cr, cb, len(payload)) + payload
-
-# Tile 0: 4x4 valid tile -> dst_top=0, dst_bottom=3
-t0 = pack_tile(4, 4, 4, 0, False, 0, 0, 0, 0, 0x50)
-# Tile 1: crop_bottom=30000 -> crop_height=30001, dst_top=30001 >= canvas height 4 -> negative signed_rows=-29997 -> massive heap OOB write
-t1 = pack_tile(4, 2, 4, 0, True, 0, 0, 3, 30000, 0x60)
-
-with open(sys.argv[1], "wb") as f:
-    f.write(header + t0 + t1)
-PY
-
-# 3. Patch src/compositor.cpp and src/converter.cpp with strict crop/tile/canvas bounds validation
+# 2. Patch src/compositor.cpp and src/converter.cpp with strict crop/tile/canvas bounds validation
 cat > "$APP_DIR/src/compositor.cpp" <<'EOF'
 #include "compositor.hpp"
 

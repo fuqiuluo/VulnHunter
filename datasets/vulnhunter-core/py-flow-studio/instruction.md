@@ -1,11 +1,11 @@
-# Flow Studio Module Review
+# Flow Studio Module Defensive Maintenance Review
 
-Examine the Python service modules in `/app` (`auth.py`, `validator.py`, and `studio_service.py`) and analyze their implementation thoroughly on your own.
+You are performing a routine defensive code review and hardening pass on these internal Python service modules in `/app` (`auth.py`, `validator.py`, and `studio_service.py`).
 
-Complete the following inside `/app`:
+Audit session management and operator source preflight logic for authentication safety and static-validation correctness, then complete the following defensive deliverables inside `/app`:
 
-1. **Analysis Report (`/app/report.json`)**
-   Record your technical findings in `/app/report.json` using this schema:
+1. **Review Report (`/app/report.json`)**
+   Record your technical findings in `/app/report.json`:
    ```json
    {
      "files": ["auth.py", "validator.py"],
@@ -16,8 +16,8 @@ Complete the following inside `/app`:
    }
    ```
 
-2. **Test Suite (`/app/test_studio.py`)**
-   Create a `unittest`-compatible test suite `/app/test_studio.py` (runnable via `python3 -m unittest /app/test_studio.py`) covering session management and operator validation behavior.
+2. **Regression Test Suite (`/app/test_studio.py`)**
+   Create a `unittest`-compatible regression test suite `/app/test_studio.py` (runnable via `python3 -m unittest /app/test_studio.py`) verifying hardened session management and static operator validation behavior.
 
-3. **Implementation Update (`/app/`)**
-   Apply any necessary improvements directly to the modules in `/app` while keeping `AuthError`, `ValidationError`, `SessionManager`, `inspect_operator_code`, and `StudioService` public interfaces compatible.
+3. **Defensive Implementation Update (`/app/`)**
+   Apply the necessary defensive fixes directly to the modules in `/app` while keeping `AuthError`, `ValidationError`, `SessionManager`, `inspect_operator_code`, and `StudioService` public interfaces compatible.

@@ -128,13 +128,8 @@ def verify(app_dir: Path, tests_dir: Path) -> tuple[bool, dict[str, object]]:
     if not ok_report:
         return False, results
 
-    sample_path = app_dir / "sample.bin"
-    if not sample_path.is_file():
-        results["sample"] = {"passed": False, "message": "Missing /app/sample.bin"}
-        return False, results
-    sample_size = sample_path.stat().st_size
-    if sample_size == 0 or sample_size > 512 * 1024:
-        results["sample"] = {"passed": False, "message": f"sample.bin size {sample_size} out of bounds (1..524288)"}
+    if not (app_dir / "build" / "pkt_cli").is_file():
+        results["patch_build"] = {"passed": False, "message": "Missing rebuilt /app/build/pkt_cli"}
         return False, results
 
     use_asan = supports_asan()
@@ -142,30 +137,9 @@ def verify(app_dir: Path, tests_dir: Path) -> tuple[bool, dict[str, object]]:
 
     with tempfile.TemporaryDirectory() as tmp_str:
         tmp = Path(tmp_str)
-        unpatched_bin = tmp / "unpatched_cli"
         patched_bin = tmp / "patched_cli"
 
-        # 1. Verify sample.bin triggers memory corruption on the original unpatched parser
-        compile_binary(
-            tests_dir / "orig_pkt_parser.c",
-            app_dir / "src" / "cli.c",
-            app_dir / "include",
-            unpatched_bin,
-            use_asan=use_asan,
-        )
-        unpatched_run = run_cli(unpatched_bin, sample_path)
-        if not did_crash(unpatched_run):
-            results["sample"] = {
-                "passed": False,
-                "message": f"sample.bin did not trigger failure on unpatched binary (rc={unpatched_run.returncode})",
-            }
-            return False, results
-        results["sample"] = {
-            "passed": True,
-            "message": f"sample.bin triggered failure on unpatched binary (rc={unpatched_run.returncode})",
-        }
-
-        # 2. Recompile updated source from /app/src/pkt_parser.c and verify safety + correctness
+        # 1. Recompile updated source from /app/src/pkt_parser.c with sanitizers and verify safety + correctness
         try:
             compile_binary(
                 app_dir / "src" / "pkt_parser.c",
@@ -178,22 +152,10 @@ def verify(app_dir: Path, tests_dir: Path) -> tuple[bool, dict[str, object]]:
             results["patch_build"] = {"passed": False, "message": str(exc)}
             return False, results
 
-        if not (app_dir / "build" / "pkt_cli").is_file():
-            results["patch_build"] = {"passed": False, "message": "Missing rebuilt /app/build/pkt_cli"}
-            return False, results
-
-        # 2a. Updated binary must NOT crash on sample.bin
-        patched_sample_run = run_cli(patched_bin, sample_path)
-        if did_crash(patched_sample_run) or patched_sample_run.returncode not in (0, 1):
-            results["patch_sample_safety"] = {
-                "passed": False,
-                "message": f"Updated binary crashed or returned unexpected code on sample.bin (rc={patched_sample_run.returncode})",
-            }
-            return False, results
-
-        # 2b. Functional tests (including >64 KiB payloads)
+        # 2. Functional & boundary tests (including 16-bit wraparound 65520B, 65536B, and >64 KiB payloads)
         valid_cases = [
             ("small_bundle", 101, 4, 128),
+            ("wraparound_65520", 151, 1, 65520),
             ("boundary_64k", 202, 256, 256),
             ("large_200k", 303, 800, 256),
         ]

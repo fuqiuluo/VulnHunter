@@ -164,16 +164,6 @@ def verify(app_dir: Path, tests_dir: Path) -> tuple[bool, dict[str, object]]:
     if not ok_rep:
         return False, results
 
-    sample_path = app_dir / "sample.bin"
-    if not sample_path.is_file():
-        results["sample"] = {"passed": False, "message": "Missing /app/sample.bin"}
-        return False, results
-
-    sz = sample_path.stat().st_size
-    if sz < 24 or sz > 512 * 1024:
-        results["sample"] = {"passed": False, "message": f"sample.bin size {sz} out of bounds"}
-        return False, results
-
     # Rebuild /app via make to ensure source changes match binary artifacts
     build_res = subprocess.run(["make", "-C", str(app_dir), "all"], capture_output=True, text=True)
     if build_res.returncode != 0:
@@ -195,58 +185,14 @@ def verify(app_dir: Path, tests_dir: Path) -> tuple[bool, dict[str, object]]:
             results["build"] = {"passed": False, "message": str(exc)}
             return False, results
 
-        # 1. Verify sample.bin triggers read-only backing image corruption on original MMU
-        orig_corrupted = False
-        last_orig_trace: dict[str, object] = {}
-        for _ in range(3):
-            last_orig_trace = run_json_cmd([str(orig_probe), "trace", str(sample_path)], timeout=20.0)
-            if last_orig_trace.get("status") == 0 and last_orig_trace.get("ro_corrupted") == 1:
-                orig_corrupted = True
-                break
-
-        if not orig_corrupted:
-            results["sample"] = {
-                "passed": False,
-                "message": "sample.bin did not corrupt read-only backing image pages on original MMU",
-                "orig_trace": last_orig_trace,
-            }
-            return False, results
-        results["sample"] = {"passed": True, "orig_trace": last_orig_trace}
-
-        # 2. Verify updated MMU executes sample.bin cleanly WITHOUT corrupting read-only image pages
-        for attempt in range(3):
-            upd_trace = run_json_cmd([str(upd_probe), "trace", str(sample_path)], timeout=20.0)
-            cli_run = subprocess.run(
-                [str(cli_bin), str(sample_path)],
-                capture_output=True,
-                text=True,
-                timeout=20.0,
-            )
-            expected_img = f"img_digest={upd_trace.get('baseline_ro_digest', 'NONE')}"
-            if (
-                upd_trace.get("status") != 0
-                or upd_trace.get("ro_corrupted") != 0
-                or cli_run.returncode != 0
-                or expected_img not in cli_run.stdout
-            ):
-                results["sample_mitigated"] = {
-                    "passed": False,
-                    "attempt": attempt,
-                    "upd_trace": upd_trace,
-                    "cli_rc": cli_run.returncode,
-                    "cli_stdout": cli_run.stdout.strip(),
-                }
-                return False, results
-        results["sample_mitigated"] = {"passed": True}
-
-        # 3. Run deterministic 2-way & 3-way hooked interleavings + 4-thread stress + functional invariants
+        # 1. Run deterministic 2-way & 3-way hooked interleavings + 4-thread stress + functional invariants
         audit_res = run_json_cmd([str(upd_probe), "audit"], timeout=35.0)
         if not audit_res.get("passed"):
             results["audit_suite"] = audit_res
             return False, results
         results["audit_suite"] = audit_res
 
-        # 4. Verify CLI compatibility on deterministic functional trace against reference digest
+        # 2. Verify CLI compatibility on deterministic functional trace against reference digest
         det_file = tmp / "det.bin"
         det_file.write_bytes(build_deterministic_cli_case())
         ref_det = run_json_cmd([str(orig_probe), "trace", str(det_file)], timeout=15.0)

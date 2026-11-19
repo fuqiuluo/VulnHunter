@@ -15,42 +15,7 @@ cat > "$APP_DIR/report.json" <<'EOF'
 }
 EOF
 
-# 2. Generate depth-4 verification bundle (/app/sample.bin)
-python3 - "$APP_DIR/sample.bin" <<'PY'
-import struct
-import sys
-
-out_path = sys.argv[1]
-csb_magic = 0x43534231
-
-def pkt7(opc, *words):
-    hdr = 0x70000000 | ((opc & 0x3F) << 16) | (len(words) & 0xFFFF)
-    return [hdr, *words]
-
-# State Group slice executed at stream_depth == 4 when triggered from IB3
-sg0 = pkt7(0x38, 0x00004000, 0x00000000, 0x0002BEEF)
-ib3 = pkt7(0x0A, (0x01 << 16) | 0, 0x00103000, len(sg0)) + pkt7(0x2A, 6)
-ib2 = pkt7(0x02, 0x00102000, len(ib3))
-ib1 = pkt7(0x02, 0x00101000, len(ib2))
-
-segs = [
-    (0x00100000, ib1),
-    (0x00101000, ib2),
-    (0x00102000, ib3),
-    (0x00103000, sg0),
-]
-
-parts = [struct.pack("<IIIIII", csb_magic, 77, 0x00100000, len(ib1), len(segs), 0)]
-for va, words in segs:
-    raw = struct.pack(f"<{len(words)}I", *words)
-    parts.append(struct.pack("<II", va, len(raw)))
-    parts.append(raw)
-
-with open(out_path, "wb") as f:
-    f.write(b"".join(parts))
-PY
-
-# 3. Disassemble firmware, widen depth bitmask in @sub_127a to 0x0007, and reassemble
+# 2. Disassemble firmware, widen depth bitmask in @sub_127a to 0x0007, and reassemble
 TMP_UC="$(mktemp)"
 trap 'rm -f "$TMP_UC"' EXIT
 

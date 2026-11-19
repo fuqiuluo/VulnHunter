@@ -13,14 +13,7 @@ cat > "$APP_DIR/report.json" <<'EOF'
 }
 EOF
 
-# 2. Generate 65-byte input ("A"*64 + "=") that triggers the AVX-512 VBMI tail underflow
-python3 - "$APP_DIR/sample.txt" <<'PY'
-import sys
-with open(sys.argv[1], "wb") as f:
-    f.write(b"A" * 64 + b"=")
-PY
-
-# 3. Apply the JDK-8393212 tail length guard in native/base64_avx512.cpp
+# 2. Apply the JDK-8393212 tail length guard in native/base64_avx512.cpp
 python3 - "$APP_DIR/native/base64_avx512.cpp" <<'PY'
 import sys
 

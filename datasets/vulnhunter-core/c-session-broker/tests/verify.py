@@ -128,67 +128,22 @@ def verify(app_dir: Path, tests_dir: Path) -> tuple[bool, dict[str, object]]:
     if not ok_rep:
         return False, results
 
-    sample_path = app_dir / "sample.bin"
-    if not sample_path.is_file():
-        results["sample"] = {"passed": False, "message": "Missing /app/sample.bin"}
-        return False, results
-    sz = sample_path.stat().st_size
-    if sz == 0 or sz > 512 * 1024:
-        results["sample"] = {"passed": False, "message": f"sample.bin size {sz} out of bounds (1..524288)"}
-        return False, results
-
     if not (app_dir / "build" / "broker_cli").is_file():
         results["build"] = {"passed": False, "message": "Missing rebuilt /app/build/broker_cli"}
         return False, results
 
-    orig_app = tests_dir / "orig_app"
-
     with tempfile.TemporaryDirectory() as tmp_str:
         tmp = Path(tmp_str)
-        orig_bin = tmp / "orig_broker_cli"
         patched_bin = tmp / "patched_broker_cli"
 
-        compile_broker(orig_app / "src", orig_app / "include", orig_bin)
-
-        # 1. Verify sample.bin triggers unauthorized preauth or admin privilege on original broker
-        orig_run = run_broker(orig_bin, sample_path)
-        unauthorized_orig = (
-            orig_run.returncode == 0
-            and ("preauth=1" in orig_run.stdout or "role=admin" in orig_run.stdout or "principal=root" in orig_run.stdout)
-        )
-        if not unauthorized_orig:
-            results["sample"] = {
-                "passed": False,
-                "message": f"sample.bin did not demonstrate unauthorized preauth/admin session on original broker (rc={orig_run.returncode}, out={orig_run.stdout.strip()!r})",
-            }
-            return False, results
-        results["sample"] = {
-            "passed": True,
-            "message": f"sample.bin triggered unauthorized session on original broker: {orig_run.stdout.strip()}",
-        }
-
-        # 2. Recompile patched broker and verify public API signatures remain intact
+        # 1. Recompile patched broker and verify public API signatures remain intact
         try:
             compile_broker(app_dir / "src", app_dir / "include", patched_bin)
         except RuntimeError as exc:
             results["patch_build"] = {"passed": False, "message": str(exc)}
             return False, results
 
-        # 3. Updated broker must reject sample.bin (and never emit preauth=1 or role=admin)
-        patched_sample = run_broker(patched_bin, sample_path)
-        if (
-            patched_sample.returncode != 1
-            or "preauth=1" in patched_sample.stdout
-            or "role=admin" in patched_sample.stdout
-        ):
-            results["patch_sample"] = {
-                "passed": False,
-                "message": f"Updated broker did not reject sample.bin cleanly (rc={patched_sample.returncode}, out={patched_sample.stdout.strip()!r})",
-            }
-            return False, results
-        results["patch_sample"] = {"passed": True, "message": "Updated broker rejected sample.bin cleanly"}
-
-        # 4. Functional regression tests
+        # 2. Functional regression tests
         func_cases = [
             (
                 "default_guest",

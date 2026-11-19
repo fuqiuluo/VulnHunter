@@ -171,15 +171,6 @@ def verify(app_dir: Path, tests_dir: Path) -> tuple[bool, dict[str, object]]:
     if not ok_rep:
         return False, results
 
-    sample_path = app_dir / "sample.bin"
-    if not sample_path.is_file():
-        results["sample"] = {"passed": False, "message": "Missing /app/sample.bin"}
-        return False, results
-    sz = sample_path.stat().st_size
-    if sz == 0 or sz > 512 * 1024:
-        results["sample"] = {"passed": False, "message": f"sample.bin size {sz} out of bounds (1..524288)"}
-        return False, results
-
     if not (app_dir / "build" / "frame_cli").is_file():
         results["build"] = {"passed": False, "message": "Missing rebuilt /app/build/frame_cli"}
         return False, results
@@ -190,42 +181,16 @@ def verify(app_dir: Path, tests_dir: Path) -> tuple[bool, dict[str, object]]:
 
     with tempfile.TemporaryDirectory() as tmp_str:
         tmp = Path(tmp_str)
-        orig_bin = tmp / "orig_frame_cli"
         patched_bin = tmp / "patched_frame_cli"
 
-        compile_cli(orig_app / "src", orig_app / "include", orig_bin, use_asan=use_asan)
-
-        # 1. sample.bin must trigger ASan/UBSan crash on original compositor
-        orig_run = run_cli(orig_bin, sample_path)
-        if not did_crash(orig_run):
-            results["sample"] = {
-                "passed": False,
-                "message": f"sample.bin did not trigger memory safety failure on original binary (rc={orig_run.returncode})",
-            }
-            return False, results
-        results["sample"] = {
-            "passed": True,
-            "message": f"sample.bin triggered failure on original binary (rc={orig_run.returncode})",
-        }
-
-        # 2. Compile patched sources with original header to verify API compatibility
+        # 1. Compile patched sources with original header and sanitizers to verify API compatibility
         try:
             compile_cli(app_dir / "src", orig_app / "include", patched_bin, use_asan=use_asan)
         except RuntimeError as exc:
             results["patch_build"] = {"passed": False, "message": str(exc)}
             return False, results
 
-        # 3. Patched binary must cleanly handle sample.bin without ASan/UBSan crash
-        patched_sample = run_cli(patched_bin, sample_path)
-        if did_crash(patched_sample) or patched_sample.returncode != 1:
-            results["patch_sample"] = {
-                "passed": False,
-                "message": f"Updated binary failed clean rejection on sample.bin (rc={patched_sample.returncode}): {patched_sample.stderr[:300]}",
-            }
-            return False, results
-        results["patch_sample"] = {"passed": True, "message": "Updated binary cleanly rejected sample.bin without sanitizer errors"}
-
-        # 4. Valid functional tests (exact FNV-1a canvas digest check)
+        # 2. Valid functional tests (exact FNV-1a canvas digest check)
         # Case A: Single 4x4 tile solid color
         px_a = expected_solid_rgba(120, 90, 180)
         stream_a = struct.pack("<IiiiiiiI", STREAM_MAGIC, 4, 4, 1, 1, 4, 4, 1) + pack_tile(

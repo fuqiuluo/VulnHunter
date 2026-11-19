@@ -156,14 +156,16 @@ def run_harness(
     lib_dir: Path,
     exec_mode: str,
     mode: str,
-    sample_file: Path,
+    sample_file: Path | None = None,
     check_jni: bool = True,
 ) -> subprocess.CompletedProcess[str]:
     java_bin = str(Path(shutil.which("java") or "java").resolve())
     jvm_cmd = [java_bin, "--enable-native-access=ALL-UNNAMED"]
     if check_jni:
         jvm_cmd.append("-Xcheck:jni")
-    jvm_cmd += [f"-Djava.library.path={lib_dir}", "-cp", str(classes_dir), "codec.VerifierHarness", mode, str(sample_file)]
+    jvm_cmd += [f"-Djava.library.path={lib_dir}", "-cp", str(classes_dir), "codec.VerifierHarness", mode]
+    if sample_file is not None:
+        jvm_cmd.append(str(sample_file))
 
     if exec_mode == "qemu-avx512vbmi":
         cmd = ["qemu-x86_64", "-cpu", "max", jvm_cmd[0], "-XX:TieredStopAtLevel=1", *jvm_cmd[1:]]
@@ -188,62 +190,19 @@ def verify(app_dir: Path, tests_dir: Path) -> tuple[bool, dict[str, object]]:
     if not ok_report:
         return False, results
 
-    sample_path = app_dir / "sample.txt"
-    if not sample_path.is_file():
-        results["sample"] = {"passed": False, "message": "Missing /app/sample.txt"}
-        return False, results
-    sz = sample_path.stat().st_size
-    if sz == 0 or sz > 64 * 1024:
-        results["sample"] = {"passed": False, "message": f"sample.txt size {sz} out of bounds (1..65536)"}
-        return False, results
-
     if not (app_dir / "build" / "b64_cli").is_file() or not (app_dir / "build" / "libb64avx512.so").is_file():
         results["build"] = {"passed": False, "message": "Missing rebuilt /app/build/b64_cli or libb64avx512.so"}
         return False, results
 
     harness_java = tests_dir / "VerifierHarness.java"
     shim_header = tests_dir / "avx512_portable_shim.h"
-    orig_dir = tests_dir / "orig_app"
 
     with tempfile.TemporaryDirectory() as tmp_str:
         tmp = Path(tmp_str)
 
-        # 1. Verify sample.txt triggers native JNI bounds corruption on original unmodified code
-        orig_classes, orig_lib, exec_mode = build_variant(
-            orig_dir / "src" / "codec",
-            orig_dir / "native" / "base64_avx512.cpp",
-            harness_java,
-            shim_header,
-            tmp / "orig",
-        )
-        results["execution_mode"] = exec_mode
-
-        jni_probe = run_harness(orig_classes, orig_lib, exec_mode, "unpatched_jni", sample_path, check_jni=True)
-        jni_aborted = (
-            jni_probe.returncode != 0
-            and ("failed bounds check" in jni_probe.stdout or "failed bounds check" in jni_probe.stderr or jni_probe.returncode < 0 or jni_probe.returncode >= 128)
-        )
-
-        canary_probe = run_harness(orig_classes, orig_lib, exec_mode, "unpatched_canary", sample_path, check_jni=False)
-        canary_hit = canary_probe.returncode == 0 and "TRIGGERED_CANARY_OOB" in canary_probe.stdout
-
-        if not (jni_aborted or canary_hit):
-            results["sample"] = {
-                "passed": False,
-                "message": "sample.txt did not trigger AVX-512 native heap out-of-bounds write on original decoder",
-            }
-            return False, results
-
-        results["sample"] = {
-            "passed": True,
-            "jni_bounds_abort": jni_aborted,
-            "shared_canary_overwritten": canary_hit,
-            "message": "sample.txt triggered native 64-lane out-of-bounds write on original AVX-512 decoder",
-        }
-
-        # 2. Compile updated /app code, verify real AVX-512 VBMI instructions remain, and run full test suite
+        # Compile updated /app code, verify real AVX-512 VBMI instructions remain, and run full test suite
         try:
-            patched_classes, patched_lib, _ = build_variant(
+            patched_classes, patched_lib, exec_mode = build_variant(
                 app_dir / "src" / "codec",
                 app_dir / "native" / "base64_avx512.cpp",
                 harness_java,
@@ -254,8 +213,9 @@ def verify(app_dir: Path, tests_dir: Path) -> tuple[bool, dict[str, object]]:
         except RuntimeError as exc:
             results["patch_build"] = {"passed": False, "message": str(exc)}
             return False, results
+        results["execution_mode"] = exec_mode
 
-        patched_run = run_harness(patched_classes, patched_lib, exec_mode, "patched_suite", sample_path, check_jni=True)
+        patched_run = run_harness(patched_classes, patched_lib, exec_mode, "patched_suite", check_jni=True)
         if patched_run.returncode != 0 or "ALL_JAVA_CHECKS_PASSED" not in patched_run.stdout:
             results["patch_suite"] = {
                 "passed": False,

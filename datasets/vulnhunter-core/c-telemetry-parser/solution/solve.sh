@@ -13,29 +13,7 @@ cat > "$APP_DIR/report.json" <<'EOF'
 }
 EOF
 
-# 2. Generate reproduction sample (chunk_count=1024, chunk_size=256 => payload=262144)
-python3 - "$APP_DIR/sample.bin" <<'PY'
-import struct
-import sys
-
-out_path = sys.argv[1]
-magic = 0x5648504B
-session_id = 42
-flags = 0
-chunk_count = 1024
-chunk_size = 256
-
-parts = [struct.pack("<IIIHH", magic, session_id, flags, chunk_count, chunk_size)]
-payload_chunk = b"A" * chunk_size
-for seq in range(chunk_count):
-    parts.append(struct.pack("<H", seq))
-    parts.append(payload_chunk)
-
-with open(out_path, "wb") as f:
-    f.write(b"".join(parts))
-PY
-
-# 3. Update src/pkt_parser.c to use size_t and safe bounds checks
+# 2. Update src/pkt_parser.c to use size_t and safe bounds checks
 python3 - "$APP_DIR/src/pkt_parser.c" <<'PY'
 import sys
 

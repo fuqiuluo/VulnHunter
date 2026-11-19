@@ -13,38 +13,7 @@ cat > "$APP_DIR/report.json" <<'EOF'
 }
 EOF
 
-# 2. Generate VMM1 multi-threaded workload sample demonstrating shared RO image corruption
-python3 - <<'PY'
-import struct
-from pathlib import Path
-import os
-
-app_dir = Path(os.environ.get("APP_DIR", "/app"))
-
-VMM_TRACE_MAGIC = 0x314D4D56
-VMM_SLOT_READ   = 1 << 0
-VMM_SLOT_EXEC   = 1 << 2
-VMM_SLOT_COW    = 1 << 3
-VMM_SLOT_BACKED = 1 << 4
-
-VMM_OP_HOST_PATCH  = 0x04
-VMM_OP_BALLOON_ZAP = 0x05
-
-parts = [
-    struct.pack("<IIHHIQ", VMM_TRACE_MAGIC, 0x20165195, 1, 2, 0, 0),
-    struct.pack("<IIQII", 0, VMM_SLOT_READ | VMM_SLOT_EXEC | VMM_SLOT_COW | VMM_SLOT_BACKED, 0x10000, 4, 0),
-    # Worker 0: concurrent override live-patch writes to guest read-only COW slot
-    struct.pack("<IIII", 0, 2500, 1, 0),
-    struct.pack("<BBHIQQ", VMM_OP_HOST_PATCH, 0, 64, 0, 0x10000, 0xDEADBEEFCAFEBABE),
-    # Worker 1: concurrent balloon page reclaim zapping the split COW PTE inside the retry window
-    struct.pack("<IIII", 1, 9000, 1, 0),
-    struct.pack("<BBHIQQ", VMM_OP_BALLOON_ZAP, 0, 1, 0, 0x10000, 0),
-]
-
-(app_dir / "sample.bin").write_bytes(b"".join(parts))
-PY
-
-# 3. Apply Linus-style FOLL_COW + S2PTE_DIRTY fix in src/vmm_pin.c
+# 2. Apply Linus-style FOLL_COW + S2PTE_DIRTY fix in src/vmm_pin.c
 cat > "$APP_DIR/src/vmm_pin.c" <<'EOF'
 #include "vmm_mmu.h"
 

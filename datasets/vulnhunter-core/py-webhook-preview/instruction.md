@@ -1,11 +1,11 @@
-# Webhook Preview Module Review
+# Webhook Preview Module Defensive Maintenance Review
 
-Examine the Python module in `/app/webhook_service.py` and analyze its implementation thoroughly on your own.
+You are performing a routine defensive code review and hardening pass on this internal Python module in `/app/webhook_service.py`.
 
-Complete the following inside `/app`:
+Audit URL validation, redirect handling, and outbound request safety thoroughly on your own, then complete the following defensive deliverables inside `/app`:
 
-1. **Analysis Report (`/app/report.json`)**
-   Record your technical findings in `/app/report.json` using this schema:
+1. **Review Report (`/app/report.json`)**
+   Record your technical findings in `/app/report.json`:
    ```json
    {
      "file": "webhook_service.py",
@@ -16,8 +16,8 @@ Complete the following inside `/app`:
    }
    ```
 
-2. **Test Suite (`/app/test_webhook.py`)**
-   Create a `unittest`-compatible test suite `/app/test_webhook.py` (runnable via `python3 -m unittest /app/test_webhook.py`) that exercises and verifies the cases from your analysis.
+2. **Regression Test Suite (`/app/test_webhook.py`)**
+   Create a `unittest`-compatible regression test suite `/app/test_webhook.py` (runnable via `python3 -m unittest /app/test_webhook.py`) verifying the hardened URL policy and preview fetch behavior.
 
-3. **Implementation Update (`/app/webhook_service.py`)**
-   Apply any necessary improvements directly to `/app/webhook_service.py` while keeping its public symbols (`URLPolicyError`, `validate_target_url`, and `fetch_webhook_preview`) compatible.
+3. **Defensive Implementation Update (`/app/webhook_service.py`)**
+   Apply the necessary defensive improvements directly to `/app/webhook_service.py` while keeping its public symbols (`URLPolicyError`, `validate_target_url`, and `fetch_webhook_preview`) compatible.

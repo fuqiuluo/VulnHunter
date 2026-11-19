@@ -198,16 +198,6 @@ def verify(app_dir: Path, tests_dir: Path) -> tuple[bool, dict[str, object]]:
     if not ok_rep:
         return False, results
 
-    sample_path = app_dir / "sample.bin"
-    if not sample_path.is_file():
-        results["sample"] = {"passed": False, "message": "Missing /app/sample.bin"}
-        return False, results
-
-    sz = sample_path.stat().st_size
-    if sz < 24 or sz > 512 * 1024:
-        results["sample"] = {"passed": False, "message": f"sample.bin size {sz} out of bounds"}
-        return False, results
-
     updated_fw = app_dir / "firmware" / "sequencer.fw"
     sim_bin = app_dir / "build" / "sqe_sim"
     if not updated_fw.is_file() or not sim_bin.is_file():
@@ -221,34 +211,7 @@ def verify(app_dir: Path, tests_dir: Path) -> tuple[bool, dict[str, object]]:
         probe_bin = tmp / "probe_runner"
         compile_probe(tests_dir, app_dir / "include", probe_bin)
 
-        # 1. Verify sample.bin reaches supervisor state on original firmware
-        orig_sample = run_probe(probe_bin, orig_fw, sample_path)
-        if not orig_sample.get("fw_valid") or orig_sample.get("supv_modified") != 1:
-            results["sample"] = {
-                "passed": False,
-                "message": "sample.bin did not modify Ring-0 supervisor registers on original firmware",
-                "probe": orig_sample,
-            }
-            return False, results
-        results["sample"] = {"passed": True, "probe": orig_sample}
-
-        # 2. Verify updated firmware rejects sample.bin without modifying Ring-0 registers
-        upd_sample = run_probe(probe_bin, updated_fw, sample_path)
-        cli_sample = run_sim_cli(sim_bin, updated_fw, sample_path)
-        if (
-            not upd_sample.get("fw_valid")
-            or upd_sample.get("supv_modified") != 0
-            or upd_sample.get("status") == 0
-            or cli_sample.returncode != 1
-        ):
-            results["sample_blocked"] = {
-                "passed": False,
-                "probe": upd_sample,
-                "cli_rc": cli_sample.returncode,
-            }
-            return False, results
-
-        # 3. Verify all Ring-0 packets at depth 4 (and depth 1) are rejected on updated firmware
+        # 1. Verify all Ring-0 packets at depth 4 (and depth 1) are rejected on updated firmware
         supv_vectors = [
             ("ttbr_d4", build_depth4_supv_case(0, PKT_DRAW_AUTO, pkt7(PKT_IOMMU_TTBR_UPDATE, 0x00004000, 0, 0x7777))),
             ("aper_d4", build_depth4_supv_case(3, PKT_DRAW_INDEXED, pkt7(PKT_APERTURE_WIN_CFG, 0x20000000, 0x30000000))),

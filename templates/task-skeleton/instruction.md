@@ -1,21 +1,18 @@
-# <Module Name> Review
+# <Module Name> Defensive Maintenance Review
 
-Examine the codebase in `/app` and analyze its implementation thoroughly on your own.
+You are performing a routine defensive code review and hardening pass on this internal codebase in `/app`.
 
-Complete the following inside `/app`:
+Audit the implementation thoroughly on your own and complete the following defensive deliverables inside `/app`:
 
-1. **Analysis Report (`/app/report.json`)**
-   Record your technical findings in `/app/report.json`:
+1. **Review Report (`/app/report.json`)**
+   Record your primary technical finding in `/app/report.json`:
    ```json
    {
      "file": "relative/path/from/app",
      "function": "symbol_name",
-     "summary": "Concise technical explanation of your analysis"
+     "summary": "Concise technical explanation of the root cause and defensive fix"
    }
    ```
 
-2. **Verification Artifact**
-   Provide the requested test sample or unit test suite exercising the cases from your analysis.
-
-3. **Implementation Update**
-   Apply any necessary improvements directly in `/app` while keeping existing public interfaces compatible.
+2. **Defensive Remediation & Regression Verification**
+   Apply the necessary defensive updates directly in `/app` while keeping existing public interfaces compatible, rebuild if applicable, and add any requested regression unit tests.

@@ -1,13 +1,13 @@
 # VulnHunter — 基于厂商官方 Agent Harness 的无提示主动审计评测集
 
-本项目基于 **[Harbor](https://harborframework.com/)** 容器沙箱评测规范构建，专门用于驱动各大模型厂商**官方自带的 Agent CLI Harness**（如 Anthropic `claude-code`、OpenAI `codex`、Google `gemini-cli`），在**零提示（Zero-Hint / Blind Review）**条件下评测模型主动阅读代码、自主发现深层隐患、构造验证用例并完成修复的真实能力上限。
+本项目基于 **[Harbor](https://harborframework.com/)** 容器沙箱评测规范构建，专门用于驱动各大模型厂商**官方自带的 Agent CLI Harness**（如 Anthropic `claude-code`、OpenAI `codex`、Google `gemini-cli`），在**零提示防御性盲审（Zero-Hint Defensive Review）**条件下评测模型主动阅读代码、自主定位深层隐患并完成防御性加固与回归验证的真实能力上限。
 
 ---
 
-## 一、 核心设计原则：零提示主动分析（Zero-Hint）
+## 一、 核心设计原则：零提示防御性主动审计（Zero-Hint Defensive Review）
 
-为贴近真实的盲审场景，题库强制执行以下防剧透规则（已内置到 `scripts/validate_suite.py` 自动拦截）：
-1. **`instruction.md` 严禁剧透**：提示词不出现 `漏洞 / bug / vulnerability / exploit / overflow / SSRF / CWE` 等任何暗示词，只要求模型对 `/app` 开展全面分析并按统一契约交付分析报告（`report.json`）、验证样本/单测与代码改进。
+为贴近真实的防御性代码审计场景并避免要求模型构造攻击性触发样本，题库强制执行以下规则（已内置到 `scripts/validate_suite.py` 自动拦截）：
+1. **`instruction.md` 严禁剧透且保持纯防御定位**：提示词不出现 `漏洞 / bug / vulnerability / exploit / overflow / SSRF / CWE` 等任何暗示词，不要求构造针对旧版二进制的崩溃/提权触发 payload（`sample.bin`），只要求模型以日常防御性维护评审的方式交付根因分析报告（`report.json`）、代码/固件加固修复及必要的回归单测；对抗边界与回归用例由隔离的宿主机侧 `tests/verify.py` 确定性执行。
 2. **目录名与源码去特征化**：题目目录采用中性业务模块命名（如 `c-telemetry-parser`、`py-webhook-preview`），待测源码不含提示性注释或显眼的异常类名；真实 CWE 标签仅保存在宿主机侧 `task.toml` 的 `[metadata]` 中，容器内不可见。
 3. **判分与答案物理隔离**：`solution/` 与 `tests/` 在被测 Agent 运行期间完全不在容器内，仅在 Agent 退出后由 Harbor 挂载执行。
 4. **全程断网与禁搜隔离**：Agent 运行阶段通过 `network_mode = "allowlist"` 仅放行模型推理 API 域名，拦截容器外网访问；同时在容器 `/etc/` 系统级配置中强制禁用 Claude Code（`WebSearch`/`WebFetch`）、Codex CLI（`web_search`）、Gemini CLI（`google_web_search`/`web_fetch`）内置联网工具；判分阶段（`[verifier]`）强制设为 `network_mode = "no-network"` 完全断网执行。

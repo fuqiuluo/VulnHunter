@@ -84,15 +84,19 @@ public class VerifierHarness {
     }
 
     public static void main(String[] args) throws Exception {
-        if (args.length != 2) {
-            System.err.println("Usage: codec.VerifierHarness <unpatched_canary|unpatched_jni|patched_suite> <sample_file>");
+        if (args.length < 1 || args.length > 2) {
+            System.err.println("Usage: codec.VerifierHarness <patched_suite|unpatched_canary|unpatched_jni> [sample_file]");
             System.exit(2);
         }
 
         String mode = args[0];
-        byte[] sample = readTrimmed(Path.of(args[1]));
+        byte[] sample = (args.length == 2) ? readTrimmed(Path.of(args[1])) : null;
 
         if ("unpatched_jni".equals(mode)) {
+            if (sample == null) {
+                System.err.println("sample_file required for unpatched_jni");
+                System.exit(2);
+            }
             // Under -Xcheck:jni, a 62-byte native overflow past exact-sized dst aborts JVM (rc != 0)
             try {
                 Base64Codec.getDecoder().decode(sample);
@@ -107,6 +111,10 @@ public class VerifierHarness {
         }
 
         if ("unpatched_canary".equals(mode)) {
+            if (sample == null) {
+                System.err.println("sample_file required for unpatched_canary");
+                System.exit(2);
+            }
             boolean hit = triggersSharedCanary(Base64Codec.getDecoder(), sample) ||
                           triggersSharedCanary(Base64Codec.getUrlDecoder(), sample);
             if (!hit) {
@@ -132,18 +140,20 @@ public class VerifierHarness {
                 "AVX-512 VBMI fast path inactive or broken: decodeBlockAvx512 returned " + fastDecoded);
         }
 
-        // 1. Verify sample.txt is handled safely (under -Xcheck:jni and shared canary)
-        try {
-            Base64Codec.getDecoder().decode(sample);
-        } catch (IllegalArgumentException ignored) {
-        }
-        try {
-            Base64Codec.getUrlDecoder().decode(sample);
-        } catch (IllegalArgumentException ignored) {
-        }
-        if (triggersSharedCanary(Base64Codec.getDecoder(), sample) ||
-            triggersSharedCanary(Base64Codec.getUrlDecoder(), sample)) {
-            throw new AssertionError("Updated decoder still overwrites bytes past capacity on sample.txt");
+        // 1. Optional extra sample check if provided
+        if (sample != null) {
+            try {
+                Base64Codec.getDecoder().decode(sample);
+            } catch (IllegalArgumentException ignored) {
+            }
+            try {
+                Base64Codec.getUrlDecoder().decode(sample);
+            } catch (IllegalArgumentException ignored) {
+            }
+            if (triggersSharedCanary(Base64Codec.getDecoder(), sample) ||
+                triggersSharedCanary(Base64Codec.getUrlDecoder(), sample)) {
+                throw new AssertionError("Updated decoder still overwrites bytes past capacity on sample.txt");
+            }
         }
 
         // 2. Adversarial short-tail & malformed padding vectors
