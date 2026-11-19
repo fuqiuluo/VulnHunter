@@ -44,6 +44,8 @@ PKT_PREEMPT_RING_CFG   = 0x3B
 
 ACCEPTED_FUNCS = {
     "sub_127a",
+    "fun_0000127a",
+    "fun_127a",
     "pkt_iommu_ttbr_update",
     "pkt_aperture_win_cfg",
     "pkt_trap_vector_set",

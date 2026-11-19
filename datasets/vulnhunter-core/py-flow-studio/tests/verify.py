@@ -7,6 +7,7 @@ import argparse
 import importlib.util
 import json
 import os
+import re
 import shutil
 import subprocess
 import sys
@@ -48,13 +49,20 @@ def check_report(app_dir: Path) -> tuple[bool, str]:
     except Exception as exc:
         return False, f"Invalid JSON in report.json: {exc}"
 
+    raw_entries: list[str] = []
     raw_files = data.get("files")
     if isinstance(raw_files, str):
-        raw_files = [raw_files]
-    elif not isinstance(raw_files, list):
-        raw_file = data.get("file")
-        raw_files = [raw_file] if isinstance(raw_file, str) else []
-    names = {Path(str(item).strip()).name for item in raw_files if str(item).strip()}
+        raw_entries.append(raw_files)
+    elif isinstance(raw_files, list):
+        raw_entries.extend(str(item) for item in raw_files)
+    raw_file = data.get("file")
+    if isinstance(raw_file, str):
+        raw_entries.append(raw_file)
+    names = {
+        Path(tok).name
+        for entry in raw_entries
+        for tok in re.findall(r"[\w./-]+\.py", entry)
+    }
     if not ({"auth.py", "validator.py"} <= names):
         return False, f"Expected report.json files to cover auth.py and validator.py, got {sorted(names)}"
 

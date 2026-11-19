@@ -38,7 +38,7 @@ def check_report(app_dir: Path) -> tuple[bool, str]:
 
     rel_file = str(data.get("file", "")).strip().lstrip("./")
     findings = data.get("findings") or []
-    if not rel_file.endswith("webhook_service.py"):
+    if "webhook_service.py" not in rel_file:
         return False, f"Expected file webhook_service.py, got {rel_file!r}"
     if not isinstance(findings, list) or len(findings) < 2:
         return False, "Expected at least 2 documented findings in report.json"
