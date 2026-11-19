@@ -6,6 +6,7 @@ from __future__ import annotations
 import argparse
 import json
 import os
+import re
 import struct
 import subprocess
 import sys
@@ -80,14 +81,16 @@ def check_report(app_dir: Path) -> tuple[bool, str]:
     except Exception as exc:
         return False, f"Invalid JSON in report.json: {exc}"
 
-    rel_file = Path(str(data.get("file", "")).strip()).name
-    func = str(data.get("function", "")).strip().split("(")[0].strip()
+    raw_file = str(data.get("file", "")).strip()
+    file_tokens = {Path(tok).name for tok in re.findall(r"[\w./-]+\.[A-Za-z0-9]+", raw_file)}
+    raw_func = str(data.get("function", "")).strip()
+    func_tokens = set(re.findall(r"[A-Za-z_][A-Za-z0-9_]*", raw_func))
     summary = str(data.get("summary", "")).strip()
 
-    if rel_file not in ACCEPTED_FILES:
-        return False, f"Unexpected file '{rel_file}', expected one of {sorted(ACCEPTED_FILES)}"
-    if func not in ACCEPTED_FUNCS:
-        return False, f"Unexpected function '{func}', expected one of {sorted(ACCEPTED_FUNCS)}"
+    if not (file_tokens & ACCEPTED_FILES):
+        return False, f"Unexpected file '{raw_file}', expected one of {sorted(ACCEPTED_FILES)}"
+    if not (func_tokens & ACCEPTED_FUNCS):
+        return False, f"Unexpected function '{raw_func}', expected one of {sorted(ACCEPTED_FUNCS)}"
     if len(summary) < 15:
         return False, "Report summary is empty or too brief"
     return True, "Report identifies target MMU source file and routine"

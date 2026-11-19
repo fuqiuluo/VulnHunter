@@ -10,7 +10,8 @@ Complete the following inside `/app`:
    {
      "files": ["auth.py", "validator.py"],
      "findings": [
-       "<conceptual_placeholder>"
+       "Concise description of finding 1",
+       "Concise description of finding 2"
      ]
    }
    ```

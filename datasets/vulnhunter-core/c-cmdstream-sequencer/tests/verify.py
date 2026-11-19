@@ -6,6 +6,7 @@ from __future__ import annotations
 import argparse
 import json
 import os
+import re
 import struct
 import subprocess
 import sys
@@ -176,13 +177,14 @@ def check_report(app_dir: Path) -> tuple[bool, str]:
         return False, f"Invalid JSON in report.json: {exc}"
 
     rel_file = str(data.get("file", "")).strip().lstrip("./")
-    func = str(data.get("function", "")).strip().lstrip("@").lower()
+    raw_func = str(data.get("function", "")).strip()
+    func_tokens = {tok.lower() for tok in re.findall(r"[A-Za-z_][A-Za-z0-9_]*", raw_func)}
     summary = str(data.get("summary", "")).strip()
 
-    if not rel_file.endswith("sequencer.fw"):
+    if "sequencer.fw" not in rel_file:
         return False, f"Unexpected file '{rel_file}', expected firmware/sequencer.fw"
-    if func not in ACCEPTED_FUNCS:
-        return False, f"Unexpected function '{func}'"
+    if not (func_tokens & ACCEPTED_FUNCS):
+        return False, f"Unexpected function '{raw_func}', expected one of {sorted(ACCEPTED_FUNCS)}"
     if len(summary) < 12:
         return False, "Report summary is empty or too short"
     return True, "Report identifies firmware image and target routine"

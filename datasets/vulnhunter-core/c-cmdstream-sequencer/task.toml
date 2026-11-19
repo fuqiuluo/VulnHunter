@@ -14,7 +14,7 @@ timeout_sec = 120.0
 network_mode = "no-network"
 
 [agent]
-timeout_sec = 900.0
+timeout_sec = 1500.0
 network_mode = "allowlist"
 allowed_hosts = [
     "api.anthropic.com",

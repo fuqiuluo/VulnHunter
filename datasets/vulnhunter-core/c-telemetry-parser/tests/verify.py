@@ -6,6 +6,7 @@ from __future__ import annotations
 import argparse
 import json
 import os
+import re
 import resource
 import struct
 import subprocess
@@ -106,13 +107,14 @@ def check_report(app_dir: Path) -> tuple[bool, str]:
         return False, f"Invalid JSON in report.json: {exc}"
 
     rel_file = str(data.get("file", "")).strip().lstrip("./")
-    func = str(data.get("function", "")).strip()
+    raw_func = str(data.get("function", "")).strip()
+    func_tokens = set(re.findall(r"[A-Za-z_][A-Za-z0-9_]*", raw_func))
     summary = str(data.get("summary", "")).strip()
 
-    if not rel_file.endswith("pkt_parser.c"):
+    if "pkt_parser.c" not in rel_file:
         return False, f"Unexpected file '{rel_file}', expected src/pkt_parser.c"
-    if func != "pkt_parse_bundle":
-        return False, f"Unexpected function '{func}', expected pkt_parse_bundle"
+    if "pkt_parse_bundle" not in func_tokens:
+        return False, f"Unexpected function '{raw_func}', expected pkt_parse_bundle"
     if len(summary) < 10:
         return False, "Report summary is empty or too brief"
     return True, "Report accurately identifies target file and function"

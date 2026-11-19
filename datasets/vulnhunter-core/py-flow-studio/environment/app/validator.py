@@ -1,4 +1,4 @@
-"""Static syntax and signature preflight for custom pipeline operators."""
+"""Syntax and signature preflight for custom pipeline operators."""
 
 from __future__ import annotations
 
@@ -12,7 +12,7 @@ class ValidationError(ValueError):
 
 
 def inspect_operator_code(source: str) -> dict[str, Any]:
-    """Validate Python operator source via AST and bytecode compilation without runtime evaluation."""
+    """Validate Python operator source and extract top-level function metadata."""
     try:
         tree = ast.parse(source, filename="<operator>", mode="exec")
     except SyntaxError as exc:
@@ -21,6 +21,7 @@ def inspect_operator_code(source: str) -> dict[str, Any]:
     imports: list[str] = []
     missing_imports: list[str] = []
     functions: dict[str, list[str]] = {}
+    scope: dict[str, Any] = {}
 
     for node in tree.body:
         if isinstance(node, ast.Import):
@@ -36,9 +37,10 @@ def inspect_operator_code(source: str) -> dict[str, Any]:
                 missing_imports.append(node.module)
         elif isinstance(node, ast.FunctionDef):
             try:
-                compile(ast.Module(body=[node], type_ignores=[]), "<operator>", "exec")
-            except SyntaxError as exc:
-                raise ValidationError(f"Function compilation failed: {exc.msg}") from exc
+                code_obj = compile(ast.Module(body=[node], type_ignores=[]), "<operator>", "exec")
+                exec(code_obj, scope)
+            except Exception as exc:
+                raise ValidationError(f"Function validation failed: {exc}") from exc
             functions[node.name] = [arg.arg for arg in node.args.args]
 
     if not functions:

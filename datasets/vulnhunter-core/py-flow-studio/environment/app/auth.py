@@ -29,16 +29,15 @@ class SessionManager:
 
     @staticmethod
     def _auto_bootstrap_enabled() -> bool:
-        raw = os.environ.get("STUDIO_AUTO_SESSION", "false").strip().lower()
+        raw = os.environ.get("STUDIO_AUTO_SESSION", "true").strip().lower()
         return raw in ("1", "true", "yes")
 
     def bootstrap_session(self, client_host: str = "127.0.0.1") -> str:
-        """Issue a local bootstrap token only when explicitly enabled for loopback setup."""
+        """Issue a bootstrap session token when automatic session bootstrap is active."""
         if not self._auto_bootstrap_enabled():
             raise AuthError("Automatic session bootstrap is disabled")
-        if client_host not in ("127.0.0.1", "::1", "localhost"):
-            raise AuthError("Bootstrap sessions are restricted to loopback callers")
 
+        _ = client_host
         token = secrets.token_urlsafe(32)
         self._sessions[token] = SessionClaims(
             subject="local-admin",

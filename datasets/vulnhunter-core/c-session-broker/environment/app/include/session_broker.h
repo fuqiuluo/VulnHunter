@@ -17,7 +17,7 @@
 #define SB_OPT_TERM_TYPE   0x18u
 #define SB_OPT_SESSION_ENV 0x27u
 
-#define SB_DEFAULT_TEMPLATE "session-login -p -h %h -t %t -- %?u{%u}{%U}"
+#define SB_DEFAULT_TEMPLATE "session-login -p -h %h -t %t %?u{-f %u}{%U}"
 
 typedef struct {
     char key[SB_MAX_KEY_LEN];

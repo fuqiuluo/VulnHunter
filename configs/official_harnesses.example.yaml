@@ -21,7 +21,7 @@ agents:
       ANTHROPIC_API_KEY: "your-glm-api-key"
       CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC: "1"
     kwargs:
-      reasoning_effort: "max"
+      reasoning_effort: "high"
 
   # 2. Claude Opus via enterprise-customized `claude-2.1.322` binary
   #    `preload` copies ~/.claude-2.1.322/ (containing claude-2.1.322 + cached official claude) from host into container

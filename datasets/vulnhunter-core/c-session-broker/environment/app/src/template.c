@@ -4,18 +4,6 @@
 #include <stdbool.h>
 #include <string.h>
 
-static bool sb_is_safe_token(const char *s) {
-    if (!s || s[0] == '\0' || s[0] == '-') {
-        return false;
-    }
-    for (const unsigned char *p = (const unsigned char *)s; *p != '\0'; ++p) {
-        if (!(isalnum(*p) || *p == '_' || *p == '.' || *p == '-')) {
-            return false;
-        }
-    }
-    return true;
-}
-
 static const char *sb_lookup_short_var(const sb_session_t *sess, char code) {
     switch (code) {
         case 'h':
@@ -24,13 +12,8 @@ static const char *sb_lookup_short_var(const sb_session_t *sess, char code) {
             return sess->term_type;
         case 'u':
             return sess->preauth_account[0] != '\0' ? sess->preauth_account : NULL;
-        case 'U': {
-            const char *env_user = sb_session_getenv(sess, "USER");
-            if (env_user && !sb_is_safe_token(env_user)) {
-                return NULL;
-            }
-            return env_user;
-        }
+        case 'U':
+            return sb_session_getenv(sess, "USER");
         default:
             return NULL;
     }
@@ -136,9 +119,6 @@ int sb_expand_invocation(const sb_session_t *sess, const char *tmpl, char *out, 
         }
 
         const char *val = sb_lookup_short_var(sess, tmpl[i++]);
-        if (val && !sb_is_safe_token(val)) {
-            return -1;
-        }
         if (sb_append_str(out, out_cap, &pos, val) != 0) {
             return -1;
         }
