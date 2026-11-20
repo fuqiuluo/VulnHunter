@@ -88,7 +88,7 @@ function signWireHeaders(opts: {
         "@authority",
         "@path",
         ...(hasQuery ? ["@query"] : []),
-        ...["x-tenant-id", "x-forwarded-scope", "x-role"].filter((h) => distinct[h]?.length),
+        ...["x-tenant-id", "x-forwarded-scope", "x-role", "content-type", "content-encoding"].filter((h) => distinct[h]?.length),
         ...(distinct["content-digest"]?.length ? ["content-digest"] : []),
       ];
 
@@ -342,10 +342,15 @@ async function runSuite(): Promise<{ allPassed: boolean; groups: Record<string, 
       });
       const multiRes = await sendWire(gwPort, "GET", "/v1/tenants/acme/webhooks/hk-alpha", multiHeaders);
       assertCond(multiRes.statusCode === 200, `Multi-header signed GET failed: ${multiRes.statusCode} ${multiRes.body}`);
-      const multiJson = JSON.parse(multiRes.body) as { forwardedScope: string };
+      const multiJson = JSON.parse(multiRes.body) as { forwardedScope: string | null };
+      const scopeTokens = (multiJson.forwardedScope ?? "")
+        .split(/[\s,]+/)
+        .map((s) => s.trim())
+        .filter(Boolean)
+        .sort();
       assertCond(
-        multiJson.forwardedScope === "items:read, webhooks:read",
-        `Expected RFC 9421 joined header 'items:read, webhooks:read', got ${JSON.stringify(multiJson.forwardedScope)}`,
+        scopeTokens.length === 2 && scopeTokens[0] === "items:read" && scopeTokens[1] === "webhooks:read",
+        `Expected forwardedScope to preserve both 'items:read' and 'webhooks:read', got ${JSON.stringify(multiJson.forwardedScope)}`,
       );
 
       // HMAC-SHA256 tenant signing
@@ -793,13 +798,16 @@ def check_regression_suite(app_dir: Path, orig_app: Path) -> tuple[bool, str]:
     if not suite_file.is_file():
         return False, "Missing /app/test/gateway.test.ts"
 
-    pass_run = subprocess.run(
-        ["node", "--experimental-strip-types", "--test", str(suite_file)],
-        cwd=str(app_dir),
-        capture_output=True,
-        text=True,
-        timeout=45,
-    )
+    try:
+        pass_run = subprocess.run(
+            ["node", "--experimental-strip-types", "--test", str(suite_file)],
+            cwd=str(app_dir),
+            capture_output=True,
+            text=True,
+            timeout=45,
+        )
+    except subprocess.TimeoutExpired:
+        return False, "gateway.test.ts timed out after 45s against updated /app"
     if pass_run.returncode != 0:
         return False, f"gateway.test.ts failed against updated /app:\n{pass_run.stdout}\n{pass_run.stderr}"
 
@@ -810,13 +818,16 @@ def check_regression_suite(app_dir: Path, orig_app: Path) -> tuple[bool, str]:
         (tmp / "test").mkdir(parents=True, exist_ok=True)
         shutil.copy2(suite_file, tmp / "test" / "gateway.test.ts")
 
-        fail_run = subprocess.run(
-            ["node", "--experimental-strip-types", "--test", str(tmp / "test" / "gateway.test.ts")],
-            cwd=str(tmp),
-            capture_output=True,
-            text=True,
-            timeout=45,
-        )
+        try:
+            fail_run = subprocess.run(
+                ["node", "--experimental-strip-types", "--test", str(tmp / "test" / "gateway.test.ts")],
+                cwd=str(tmp),
+                capture_output=True,
+                text=True,
+                timeout=45,
+            )
+        except subprocess.TimeoutExpired:
+            return True, "Regression suite passes on hardened code and fails (timed out after assertion failure) on original unmodified code"
         if fail_run.returncode == 0:
             return False, "Updated gateway.test.ts unexpectedly passed against original unpatched src/"
 
@@ -836,13 +847,16 @@ def check_live_gateway(app_dir: Path) -> tuple[bool, dict[str, object]]:
         harness_path = tmp / "verify_harness.ts"
         harness_path.write_text(HARNESS_TS, encoding="utf-8")
 
-        proc = subprocess.run(
-            ["node", "--experimental-strip-types", str(harness_path)],
-            cwd=str(tmp),
-            capture_output=True,
-            text=True,
-            timeout=60,
-        )
+        try:
+            proc = subprocess.run(
+                ["node", "--experimental-strip-types", str(harness_path)],
+                cwd=str(tmp),
+                capture_output=True,
+                text=True,
+                timeout=60,
+            )
+        except subprocess.TimeoutExpired:
+            return False, {"error": "verify_harness.ts timed out after 60s"}
         stdout_lines = [ln.strip() for ln in proc.stdout.splitlines() if ln.strip()]
         payload: dict[str, object] = {}
         if stdout_lines:

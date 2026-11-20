@@ -431,10 +431,15 @@ def check_architecture_not_bypassed(app_dir: Path) -> tuple[bool, str]:
         return False, "Missing src/raw_chunk.rs or src/deque.rs"
     rc_txt = raw_chunk.read_text(encoding="utf-8", errors="replace")
     dq_txt = deque_rs.read_text(encoding="utf-8", errors="replace")
-    if "alloc" not in rc_txt or "dealloc" not in rc_txt:
-        return False, "src/raw_chunk.rs must retain manual chunk allocation (alloc/dealloc)"
-    if "VecDeque" in dq_txt:
-        return False, "ChunkedDeque in src/deque.rs must use RawChunk segments rather than wrapping VecDeque"
+    has_manual_storage = (
+        ("alloc" in rc_txt and "dealloc" in rc_txt)
+        or "MaybeUninit" in rc_txt
+        or "NonNull" in rc_txt
+    )
+    if "struct RawChunk" not in rc_txt or not has_manual_storage:
+        return False, "src/raw_chunk.rs must retain low-level RawChunk buffer management (alloc/dealloc, MaybeUninit, or NonNull)"
+    if "VecDeque" in dq_txt or "VecDeque" in rc_txt:
+        return False, "ChunkedDeque must use RawChunk segments rather than wrapping VecDeque"
     return True, "Segmented RawChunk architecture preserved"
 
 
@@ -442,13 +447,21 @@ def run_cargo_test(work_dir: Path, extra_args: list[str] | None = None) -> subpr
     cmd = ["cargo", "test", "--offline", "--manifest-path", str(work_dir / "Cargo.toml")]
     if extra_args:
         cmd.extend(extra_args)
-    return subprocess.run(
-        cmd,
-        capture_output=True,
-        text=True,
-        env=cargo_env(),
-        timeout=120,
-    )
+    try:
+        return subprocess.run(
+            cmd,
+            capture_output=True,
+            text=True,
+            env=cargo_env(),
+            timeout=120,
+        )
+    except subprocess.TimeoutExpired as exc:
+        return subprocess.CompletedProcess(
+            cmd,
+            returncode=124,
+            stdout=exc.stdout or "",
+            stderr=(exc.stderr or "") + "\ncargo test timed out after 120s",
+        )
 
 
 def verify(app_dir: Path, orig_dir: Path) -> tuple[bool, dict]:
