@@ -37,6 +37,12 @@ void append_bytes(std::vector<uint8_t>& dst, const std::vector<uint8_t>& src) {
     dst.insert(dst.end(), src.begin(), src.end());
 }
 
+std::vector<uint8_t> client_preface_with_settings() {
+    std::vector<uint8_t> wire(h2::kClientConnectionPreface.begin(), h2::kClientConnectionPreface.end());
+    append_bytes(wire, h2::H2ServerConnection::serialize_frame(h2::FrameType::SETTINGS, 0, 0, {}));
+    return wire;
+}
+
 void push_hpack_str(std::vector<uint8_t>& out, std::string_view s, bool huff = false) {
     if (huff) {
         auto enc = h2::huffman_encode(s);
@@ -51,7 +57,7 @@ void push_hpack_str(std::vector<uint8_t>& out, std::string_view s, bool huff = f
 // 1. Functional parity: dynamic table indexing, lowered + acknowledged table size update, valid trailers, flow control
 void test_group_functional() {
     h2::H2ServerConnection conn;
-    std::vector<uint8_t> wire(h2::kClientConnectionPreface.begin(), h2::kClientConnectionPreface.end());
+    std::vector<uint8_t> wire = client_preface_with_settings();
 
     // Server lowers header table limit to 128 -> peer signals size update 128 at start of next HEADERS block
     conn.set_local_header_table_limit(128);
@@ -63,6 +69,7 @@ void test_group_functional() {
             {":scheme", "https"},
             {":authority", "edge.internal"},
             {":path", "/v2/upload"},
+            {"te", "trailers"},
             {"content-length", "5"},
             {"x-custom-long-header-alpha", "value-1"},
         },
@@ -171,11 +178,11 @@ void test_group_hpack_varint_and_table_size_cap() {
     //    then on stream 3 attempts Dynamic Table Size Update = 512 (<= 4096 default, but > 128 protocol_max_size!)
     h2::H2ServerConnection conn1;
     conn1.set_local_header_table_limit(128);
-    std::vector<uint8_t> wire1(h2::kClientConnectionPreface.begin(), h2::kClientConnectionPreface.end());
+    std::vector<uint8_t> wire1 = client_preface_with_settings();
     std::vector<uint8_t> ack_128;
     h2::encode_prefixed_int(ack_128, 0x20u, 5, 128);
     auto valid_req1 = h2::HpackEncoder::encode_literal_block(
-        {{":method", "GET"}, {":scheme", "https"}, {":path", "/init"}},
+        {{":method", "GET"}, {":scheme", "https"}, {":authority", "edge.internal"}, {":path", "/init"}},
         false,
         false);
     append_bytes(ack_128, valid_req1);
@@ -202,11 +209,11 @@ void test_group_hpack_varint_and_table_size_cap() {
 
     // C: Server lowers protocol_max_size from 4096 -> 64, and peer sends a header block WITHOUT the required <=64 size update!
     h2::H2ServerConnection conn2;
-    std::vector<uint8_t> wire2(h2::kClientConnectionPreface.begin(), h2::kClientConnectionPreface.end());
+    std::vector<uint8_t> wire2 = client_preface_with_settings();
     check_cond(conn2.receive_bytes(wire2) == h2::ErrorCode::NO_ERROR, "Preface failed");
     conn2.set_local_header_table_limit(64);
     auto no_upd_block = h2::HpackEncoder::encode_literal_block(
-        {{":method", "GET"}, {":scheme", "https"}, {":path", "/"}},
+        {{":method", "GET"}, {":scheme", "https"}, {":authority", "edge.internal"}, {":path", "/"}},
         true,
         false);
     auto f_no_upd = h2::H2ServerConnection::serialize_frame(
@@ -224,9 +231,9 @@ void test_group_continuation_trailers_and_smuggling() {
     // A: PING interleaved between HEADERS (without END_HEADERS) and CONTINUATION must fail with PROTOCOL_ERROR!
     {
         h2::H2ServerConnection conn;
-        std::vector<uint8_t> wire(h2::kClientConnectionPreface.begin(), h2::kClientConnectionPreface.end());
+        std::vector<uint8_t> wire = client_preface_with_settings();
         auto hb = h2::HpackEncoder::encode_literal_block(
-            {{":method", "GET"}, {":scheme", "https"}, {":path", "/ok"}},
+            {{":method", "GET"}, {":scheme", "https"}, {":authority", "edge.internal"}, {":path", "/ok"}},
             false,
             false);
         std::vector<uint8_t> p1(hb.begin(), hb.begin() + 5);
@@ -242,9 +249,9 @@ void test_group_continuation_trailers_and_smuggling() {
     // B: Trailing HEADERS containing `:path` pseudo-header must fail with PROTOCOL_ERROR!
     {
         h2::H2ServerConnection conn;
-        std::vector<uint8_t> wire(h2::kClientConnectionPreface.begin(), h2::kClientConnectionPreface.end());
+        std::vector<uint8_t> wire = client_preface_with_settings();
         auto init_h = h2::HpackEncoder::encode_literal_block(
-            {{":method", "POST"}, {":scheme", "https"}, {":path", "/public/echo"}},
+            {{":method", "POST"}, {":scheme", "https"}, {":authority", "edge.internal"}, {":path", "/public/echo"}, {"te", "trailers"}},
             false,
             false);
         append_bytes(wire, h2::H2ServerConnection::serialize_frame(h2::FrameType::HEADERS, h2::FrameFlags::END_HEADERS, 1, init_h));
@@ -265,9 +272,9 @@ void test_group_continuation_trailers_and_smuggling() {
     // C: Declared `content-length: 10` but stream closes after only 4 DATA bytes -> PROTOCOL_ERROR!
     {
         h2::H2ServerConnection conn;
-        std::vector<uint8_t> wire(h2::kClientConnectionPreface.begin(), h2::kClientConnectionPreface.end());
+        std::vector<uint8_t> wire = client_preface_with_settings();
         auto init_h = h2::HpackEncoder::encode_literal_block(
-            {{":method", "POST"}, {":scheme", "https"}, {":path", "/upload"}, {"content-length", "10"}},
+            {{":method", "POST"}, {":scheme", "https"}, {":authority", "edge.internal"}, {":path", "/upload"}, {"content-length", "10"}},
             false,
             false);
         append_bytes(wire, h2::H2ServerConnection::serialize_frame(h2::FrameType::HEADERS, h2::FrameFlags::END_HEADERS, 1, init_h));
@@ -282,11 +289,12 @@ void test_group_continuation_trailers_and_smuggling() {
     // D: Huffman-encoded CR/LF or NUL byte inside header value -> PROTOCOL_ERROR!
     {
         h2::H2ServerConnection conn;
-        std::vector<uint8_t> wire(h2::kClientConnectionPreface.begin(), h2::kClientConnectionPreface.end());
+        std::vector<uint8_t> wire = client_preface_with_settings();
         auto crlf_h = h2::HpackEncoder::encode_literal_block(
             {
                 {":method", "GET"},
                 {":scheme", "https"},
+                {":authority", "edge.internal"},
                 {":path", "/test"},
                 {"x-forwarded-user", std::string("alice\r\nx-admin: true")},
             },
@@ -312,9 +320,9 @@ void test_group_flow_control_window_and_huffman_padding() {
     //    Must return FLOW_CONTROL_ERROR without signed 32-bit integer overflow UB!
     {
         h2::H2ServerConnection conn;
-        std::vector<uint8_t> wire(h2::kClientConnectionPreface.begin(), h2::kClientConnectionPreface.end());
+        std::vector<uint8_t> wire = client_preface_with_settings();
         auto req = h2::HpackEncoder::encode_literal_block(
-            {{":method", "POST"}, {":scheme", "https"}, {":path", "/stream"}},
+            {{":method", "POST"}, {":scheme", "https"}, {":authority", "edge.internal"}, {":path", "/stream"}},
             false,
             false);
         append_bytes(wire, h2::H2ServerConnection::serialize_frame(h2::FrameType::HEADERS, h2::FrameFlags::END_HEADERS, 1, req));

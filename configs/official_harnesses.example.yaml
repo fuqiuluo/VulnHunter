@@ -48,6 +48,17 @@ agents:
   - name: gemini-cli
     model_name: gemini/gemini-2.5-pro
 
+  # 5. Google Antigravity CLI (`agy`) using local Google OAuth subscription quota
+  #    First run once on host: ./scripts/agy_oauth_login.sh
+  #    Then uncomment/adjust model_name (run `agy models` to list available slugs):
+  # - import_path: "harnesses.custom_antigravity:CustomAntigravityCli"
+  #   model_name: google/gemini-4-neon-xhigh
+  #   kwargs:
+  #     auth_mode: "oauth"
+  #     binary_path: "~/.local/bin/agy"
+  #     oauth_home: "~/.agy-eval"
+  #     disable_web_search: true
+
 environment:
   type: docker
   delete: true

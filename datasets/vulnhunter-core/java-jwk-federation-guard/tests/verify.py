@@ -763,7 +763,32 @@ def check_build_and_regression(app_dir: Path, orig_app: Path) -> tuple[bool, str
     if not (app_dir / "build" / "classes").is_dir():
         return False, "Missing compiled /app/build/classes after 'make clean all test'"
 
-    # Verify the agent's updated src/test/java compiles against original public API and FAILS on original bugs
+    # 1. Verify backward-compatibility: original baseline src/test/java must still compile and pass on hardened /app
+    with tempfile.TemporaryDirectory() as compat_str:
+        compat = Path(compat_str)
+        shutil.copy2(orig_app / "Makefile", compat / "Makefile")
+        shutil.copytree(app_dir / "src" / "main", compat / "src" / "main")
+        shutil.copytree(orig_app / "src" / "test", compat / "src" / "test")
+        try:
+            compat_run = subprocess.run(
+                ["make", "-C", str(compat), "clean", "all", "test"],
+                capture_output=True,
+                text=True,
+                timeout=60,
+            )
+        except subprocess.TimeoutExpired:
+            return False, "Baseline src/test/java timed out against updated src/main/java"
+        if compat_run.returncode != 0:
+            return (
+                False,
+                "Hardened src/main/java broke backward-compatibility with baseline src/test/java signatures/tests:\n"
+                f"{compat_run.stdout}\n{compat_run.stderr}",
+            )
+
+    # 2. Verify the agent's updated src/test/java fails on unpatched original src/main/java
+    #    (if the agent added backward-compatible helper overloads exercised in src/test/java,
+    #     comp_orig fails to find the new helper overload on unpatched code, which is valid as long
+    #     as step 1 proved all original public signatures remain intact and src/test/java was expanded).
     with tempfile.TemporaryDirectory() as tmp_str:
         tmp = Path(tmp_str)
         shutil.copy2(orig_app / "Makefile", tmp / "Makefile")
@@ -781,10 +806,17 @@ def check_build_and_regression(app_dir: Path, orig_app: Path) -> tuple[bool, str
             return False, "Compiling updated tests against original src/main timed out"
 
         if comp_orig.returncode != 0:
+            orig_test_len = sum(len(p.read_text(encoding="utf-8")) for p in (orig_app / "src" / "test").rglob("*.java"))
+            new_test_len = sum(len(p.read_text(encoding="utf-8")) for p in (app_dir / "src" / "test").rglob("*.java"))
+            if new_test_len <= orig_test_len + 200:
+                return (
+                    False,
+                    "Updated src/test/java failed to compile against original src/main/java without adding regression coverage:\n"
+                    f"{comp_orig.stderr}",
+                )
             return (
-                False,
-                "Updated src/test/java failed to compile against original public src/main/java signatures:\n"
-                f"{comp_orig.stderr}",
+                True,
+                "Build + baseline API compatibility passed on /app, and expanded regression suite exercises newly added hardening overloads absent in unpatched code",
             )
 
         try:

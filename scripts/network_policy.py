@@ -21,6 +21,15 @@ DEFAULT_ALLOWED_HOSTS: tuple[str, ...] = (
     "generativelanguage.googleapis.com",
 )
 
+# Hosts required when running Antigravity CLI (`agy`) via local Google OAuth subscription
+AGY_OAUTH_ALLOWED_HOSTS: tuple[str, ...] = (
+    "daily-cloudcode-pa.googleapis.com",
+    "cloudcode-pa.googleapis.com",
+    "oauth2.googleapis.com",
+    "www.googleapis.com",
+    "*.googleapis.com",
+)
+
 # Environment variables whose URLs/hosts are automatically added to [agent].allowed_hosts
 EXTRA_HOST_ENV_KEYS: tuple[str, ...] = (
     "VULNHUNTER_EXTRA_ALLOWED_HOSTS",
@@ -29,6 +38,7 @@ EXTRA_HOST_ENV_KEYS: tuple[str, ...] = (
     "OPENAI_BASE_URL",
     "GEMINI_BASE_URL",
     "GOOGLE_GEMINI_BASE_URL",
+    "AGY_LLM_GATEWAY_URL",
 )
 
 
@@ -121,6 +131,19 @@ def parse_yaml_base_urls(yaml_file: Path) -> list[str]:
     return found
 
 
+def yaml_uses_agy_oauth(yaml_file: Path) -> bool:
+    """Return True if the Harbor YAML config enables CustomAntigravityCli (local OAuth subscription)."""
+    if not yaml_file.is_file():
+        return False
+    for raw_line in yaml_file.read_text(encoding="utf-8").splitlines():
+        stripped = raw_line.strip()
+        if not stripped or stripped.startswith("#"):
+            continue
+        if "custom_antigravity:CustomAntigravityCli" in stripped:
+            return True
+    return False
+
+
 def resolve_allowed_hosts(
     env_file: Path | None = None,
     environ: Mapping[str, str] | None = None,
@@ -135,6 +158,13 @@ def resolve_allowed_hosts(
 
     hosts: list[str] = list(DEFAULT_ALLOWED_HOSTS)
     seen: set[str] = set(hosts)
+
+    agy_oauth_env = merged_env.get("VULNHUNTER_AGY_OAUTH", "").strip().lower()
+    if agy_oauth_env in ("1", "true", "yes", "on") or yaml_uses_agy_oauth(yaml_path):
+        for host in AGY_OAUTH_ALLOWED_HOSTS:
+            if host not in seen:
+                seen.add(host)
+                hosts.append(host)
 
     raw_sources: list[str] = [merged_env.get(key, "").strip() for key in EXTRA_HOST_ENV_KEYS]
     raw_sources.extend(parse_yaml_base_urls(yaml_path))
