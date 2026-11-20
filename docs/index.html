@@ -3,17 +3,26 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="color-scheme" content="light dark" />
   <title>VulnHunter Leaderboard · Zero-Hint Defensive Security Audit Benchmark</title>
   <meta name="description" content="Interactive difficulty-weighted leaderboard for VulnHunter: 20 zero-hint defensive code audit & hardening tasks across 12 vendor-official CLI agent models (240 Harbor Docker trials)." />
+  <script>
+    // Apply a saved theme choice before first paint; otherwise the OS setting wins.
+    try {
+      var savedTheme = localStorage.getItem("vh-theme");
+      if (savedTheme === "light" || savedTheme === "dark") {
+        document.documentElement.setAttribute("data-theme", savedTheme);
+      }
+    } catch (e) {}
+  </script>
   <link rel="stylesheet" href="./styles.css" />
 </head>
 <body>
   <header class="navbar">
     <div class="container nav-inner">
       <a class="brand" href="#top">
-        <span class="brand-icon">VH</span>
-        <span>VulnHunter</span>
-        <span class="brand-pill mono">v1.0 · 240 Trials</span>
+        <span class="brand-name">VulnHunter</span>
+        <span class="brand-meta">v1.0 · 240 trials</span>
       </a>
       <nav class="nav-links">
         <a href="#leaderboard" data-i18n="nav_leaderboard">综合加权榜</a>
@@ -22,8 +31,8 @@
         <a href="#insights" data-i18n="nav_insights">核心洞察</a>
       </nav>
       <div class="nav-actions">
-        <button id="lang-toggle" class="btn-ghost" type="button">EN / 中文</button>
-        <button id="theme-toggle" class="btn-ghost" type="button">☀️ Light</button>
+        <button id="lang-toggle" class="btn-ghost" type="button">English</button>
+        <button id="theme-toggle" class="btn-ghost" type="button">Light</button>
         <a class="btn-ghost" href="https://github.com/fuqiuluo/VulnHunter" target="_blank" rel="noopener noreferrer">GitHub ↗</a>
       </div>
     </div>
@@ -36,31 +45,27 @@
       <p class="hero-sub" data-i18n="hero_sub">
         基于 Harbor 隔离容器沙箱驱动厂商官方 CLI Harness（Claude Code / Codex CLI / Antigravity CLI），在完全无漏洞提示（Zero-Hint）、断网与禁搜隔离条件下，检验 12 款前沿模型对 20 个真实多语言系统工程（C / C++ / Rust / Java / Python / TypeScript）的深度代码审查、耦合缺陷定位与原地加固能力。
       </p>
-      <div class="kpi-grid" id="kpi-grid"></div>
+      <div class="stat-strip" id="kpi-grid"></div>
     </section>
 
-    <!-- Weighting Controls -->
-    <section class="controls-dock" aria-label="Leaderboard weighting controls">
-      <div class="controls-top">
-        <div class="segmented" id="scheme-buttons">
-          <button class="seg-btn active" data-scheme="combined" type="button" data-i18n="scheme_combined">综合难度加权 Tier×(2−p)</button>
-          <button class="seg-btn" data-scheme="tier" type="button" data-i18n="scheme_tier">分阶权重 1:2:3</button>
-          <button class="seg-btn" data-scheme="info" type="button" data-i18n="scheme_info">信息熵权重 1−log₂p</button>
-          <button class="seg-btn" data-scheme="equal" type="button" data-i18n="scheme_equal">等权原始分 1:1:1</button>
+    <!-- Weighting controls: one row above everything they scope -->
+    <section class="controls" aria-label="Leaderboard weighting controls">
+      <div class="controls-row">
+        <div class="control-group">
+          <span class="control-label" data-i18n="ctl_weighting">加权方式</span>
+          <div class="segmented" id="scheme-buttons" role="group">
+            <button class="seg-btn active" data-scheme="combined" type="button" data-i18n="scheme_combined">综合难度加权 Tier×(2−p)</button>
+            <button class="seg-btn" data-scheme="tier" type="button" data-i18n="scheme_tier">分阶权重 1:2:3</button>
+            <button class="seg-btn" data-scheme="info" type="button" data-i18n="scheme_info">信息熵权重 1−log₂p</button>
+            <button class="seg-btn" data-scheme="equal" type="button" data-i18n="scheme_equal">等权原始分 1:1:1</button>
+          </div>
         </div>
         <label class="toggle-label">
           <input id="exclude-refusals" type="checkbox" />
           <span data-i18n="toggle_refusals">剔除厂商云端安全误拒（按可测题归一化）</span>
         </label>
       </div>
-      <div class="formula-banner">
-        <div id="formula-desc"></div>
-        <div class="legend-row">
-          <span class="legend-item"><span class="legend-swatch" style="background:var(--t1)"></span><span data-i18n="leg_t1">Tier-1 基础 (8题)</span></span>
-          <span class="legend-item"><span class="legend-swatch" style="background:var(--t2)"></span><span data-i18n="leg_t2">Tier-2 多缺陷 (6题)</span></span>
-          <span class="legend-item"><span class="legend-swatch" style="background:var(--t3)"></span><span data-i18n="leg_t3">Tier-3 深水区四缺陷 (6题)</span></span>
-        </div>
-      </div>
+      <p class="formula-line" id="formula-desc"></p>
     </section>
 
     <!-- Section 1: Weighted Leaderboard -->
@@ -70,20 +75,27 @@
           <h2 data-i18n="sec_lb_title">1. 加权综合排行榜（12 Models × 20 Tasks）</h2>
           <p class="section-desc" data-i18n="sec_lb_desc">点击表头可自定义排序；★ 徽章表示攻克了全榜仅 1～2 款模型通过的皇冠级稀缺赛题（c-ike-key-schedule / rs-mvcc-ssi-engine）。</p>
         </div>
+        <div class="legend-row">
+          <span class="legend-item"><span class="legend-swatch" style="background:var(--tier-1)"></span><span data-i18n="leg_t1">Tier-1 基础 (8题)</span></span>
+          <span class="legend-item"><span class="legend-swatch" style="background:var(--tier-2)"></span><span data-i18n="leg_t2">Tier-2 多缺陷 (6题)</span></span>
+          <span class="legend-item"><span class="legend-swatch" style="background:var(--tier-3)"></span><span data-i18n="leg_t3">Tier-3 深水区四缺陷 (6题)</span></span>
+        </div>
       </div>
       <div class="panel">
         <div class="table-wrap">
           <table class="lb-table" id="lb-table">
             <thead>
               <tr>
-                <th data-sort="rank">#</th>
+                <th data-sort="rank" class="rank">#</th>
                 <th data-sort="short" data-i18n="th_model">模型 / 厂商</th>
                 <th data-sort="harness" data-i18n="th_harness">官方 CLI (档位)</th>
-                <th data-sort="score" data-i18n="th_weighted">加权得分 (/100)</th>
-                <th data-sort="score" data-i18n="th_bar">分阶贡献构成</th>
-                <th data-sort="rawCount" data-i18n="th_raw">原始通过</th>
-                <th data-sort="c3" data-i18n="th_tiers">T1 / T2 / T3</th>
-                <th data-sort="avgSec" data-i18n="th_avg">通过均耗时</th>
+                <th data-sort="score" class="r" data-i18n="th_weighted">加权得分 (/100)</th>
+                <th data-i18n="th_bar">分阶贡献构成</th>
+                <th data-sort="rawCount" class="r" data-i18n="th_raw">原始通过</th>
+                <th data-sort="c1" class="r">T1</th>
+                <th data-sort="c2" class="r">T2</th>
+                <th data-sort="c3" class="r">T3</th>
+                <th data-sort="avgSec" class="r" data-i18n="th_avg">通过均耗时</th>
               </tr>
             </thead>
             <tbody id="lb-tbody"></tbody>
@@ -104,37 +116,37 @@
         <div class="panel chart-panel">
           <div class="chart-head">
             <h3 data-i18n="pareto_title">速度 × 加权得分帕累托图</h3>
-            <div class="legend-row" id="prov-legend"></div>
+            <div class="legend-row" id="pareto-legend"></div>
           </div>
           <div id="pareto-chart"></div>
         </div>
         <div class="panel chart-panel">
           <div class="chart-head">
             <h3 data-i18n="hard_title">20 题实测通过率与当前权重</h3>
-            <span class="mono" style="font-size:11px;color:var(--text-muted)" id="hard-weight-tag"></span>
+            <span class="chart-note" id="hard-weight-tag"></span>
           </div>
           <div class="hardness-list" id="hardness-list"></div>
         </div>
       </div>
     </section>
 
-    <!-- Section 3: Full 20x12 Heatmap Matrix -->
+    <!-- Section 3: Full 20x12 Matrix -->
     <section id="matrix" class="section">
       <div class="section-header">
         <div>
           <h2 data-i18n="sec_mat_title">3. 20 赛题 × 12 模型完整评测热力矩阵</h2>
-          <p class="section-desc" data-i18n="sec_mat_desc">支持按难度分阶与编程语言筛选；点击或悬停任意单元格与题头，在底部检查栏查看源码规模（LOC）、CWE 标签、权重及精确耗时。</p>
+          <p class="section-desc" data-i18n="sec_mat_desc">行为赛题（按难度分阶分组），列为模型（按当前加权排名）；可按分阶与语言筛选，悬停任意单元格查看精确耗时、源码规模（LOC）、CWE 标签与当前权重。</p>
         </div>
       </div>
       <div class="panel">
-        <div class="filter-row">
-          <div class="filter-group" id="tier-filters"></div>
-          <div class="filter-group" id="lang-filters"></div>
+        <div class="matrix-toolbar">
+          <div class="segmented compact" id="tier-filters" role="group"></div>
+          <div class="segmented compact" id="lang-filters" role="group"></div>
         </div>
-        <div class="table-wrap">
+        <div class="table-wrap matrix-wrap">
           <table class="matrix-table" id="matrix-table"></table>
         </div>
-        <div class="inspector-bar" id="inspector-bar"></div>
+        <div class="matrix-legend legend-row" id="matrix-legend"></div>
       </div>
     </section>
 
@@ -159,7 +171,7 @@
     </footer>
   </main>
 
-  <div id="svg-tooltip"></div>
+  <div id="svg-tooltip" role="tooltip"></div>
 
   <script src="./data/leaderboard.js"></script>
   <script src="./app.js"></script>
