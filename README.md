@@ -2,32 +2,33 @@
 
 [![Live Leaderboard](https://img.shields.io/badge/Leaderboard-GitHub%20Pages-38bdf8?style=flat-square)](https://fuqiuluo.github.io/VulnHunter/)
 [![Tasks](https://img.shields.io/badge/Tasks-20%20Zero--Hint-818cf8?style=flat-square)](#三-20-道赛题分阶清单)
-[![Trials](https://img.shields.io/badge/Evaluated-240%20Trials%20(12%20Models)-34d399?style=flat-square)](#一-20-题--12-模型加权综合排行榜)
+[![Trials](https://img.shields.io/badge/Evaluated-260%20Trials%20(13%20Models)-34d399?style=flat-square)](#一-20-题--13-模型加权综合排行榜)
 
-> **在线交互排行榜仪表盘**：**[https://fuqiuluo.github.io/VulnHunter/](https://fuqiuluo.github.io/VulnHunter/)**（支持 4 种难度加权公式动态切换、剔除云端安全误拒对比、速度×得分帕累托前沿图与 20×12 交互热力矩阵）
+> **在线交互排行榜仪表盘**：**[https://fuqiuluo.github.io/VulnHunter/](https://fuqiuluo.github.io/VulnHunter/)**（支持 4 种难度加权公式动态切换、剔除云端安全误拒对比、速度×得分帕累托前沿图与 20×13 交互热力矩阵）
 
 本项目基于 **[Harbor](https://harborframework.com/)** 容器沙箱评测规范构建，专门用于驱动各大模型厂商**官方自带的 Agent CLI Harness**（Anthropic `claude-code`、OpenAI `codex`、Google Antigravity CLI `agy` 等），在**零提示防御性盲审（Zero-Hint Defensive Review）**条件下评测模型主动阅读跨文件多语言工程代码、自主定位深层耦合缺陷并完成原地加固与回归验证的真实能力上限。单题 Agent 执行超时对齐 SEC-bench / CyberGym-E2E 标准设为 **`5400s`（90 分钟）**。
 
 ---
 
-## 一、 20 题 × 12 模型加权综合排行榜
+## 一、 20 题 × 13 模型加权综合排行榜
 
-主排名采用 **综合难度加权分** $w_i = \text{Tier}_i \times (2 - p_i)$（兼顾分阶复杂度 $\text{Tier}_i \in \{1, 2, 3\}$ 与 12 模型实测通过率稀缺度 $p_i$，折算为 `100.0` 分制，彻底消除同分平局；全部 240 场评测完成度 **100%**，总通过率 **181 / 240 = 75.4%**）：
+主排名采用 **综合难度加权分** $w_i = \text{Tier}_i \times (2 - p_i)$（兼顾分阶复杂度 $\text{Tier}_i \in \{1, 2, 3\}$ 与 13 模型实测通过率稀缺度 $p_i$，折算为 `100.0` 分制，彻底消除同分平局；全部 260 场评测完成度 **100%**，总通过率 **193 / 260 = 74.2%**）：
 
 | 排名 | 模型 | 官方 CLI (档位) | **综合加权 (/100)** | 分阶 1:2:3 (/38) | 原始通过 | T1 / T2 / T3 | 通过均耗时 |
 | :---: | :--- | :--- | :---: | :---: | :---: | :---: | :---: |
-| **1** | **`anthropic/claude-opus-5-5[1m]`** | `Claude Code` (`xhigh`) | **87.0** | **34.0 (89.5%)** | **18 / 20 (90.0%)** | 8/8 · 4/6 · **6/6** | 1,366s |
-| **2** | **`anthropic/claude-fable-5-2[1m]`** | `Claude Code` (`xhigh`) | **81.5** | 32.0 (84.2%) | 17 / 20 (85.0%) | 7/8 · **5/6** · 5/6 | 1,697s |
-| **3** | **`openai/gpt-6.2-astra`** | `Codex CLI` (`xhigh`) | **76.1** | 31.0 (81.6%) | 17 / 20 (85.0%) | 8/8 · 4/6 · 5/6 | **440s** |
-| **4** | **`google/gemini-4-neon-xhigh`** | `Antigravity CLI` (`xhigh`) | **73.0** | 30.0 (78.9%) | 16 / 20 (80.0%) | 7/8 · 4/6 · 5/6 | 836s |
-| **5** | `openai/gpt-6.2-sol` | `Codex CLI` (`xhigh`) | **68.0** | 28.0 (73.7%) | 16 / 20 (80.0%) | 8/8 · 4/6 · 4/6 | 587s |
-| **6** | `google/gemini-4-carbon-high` | `Antigravity CLI` (`high`) | **67.9** | 28.0 (73.7%) | 14 / 20 (70.0%) | 5/8 · 4/6 · 5/6 | 1,208s |
-| **7** | `openai/gpt-6-sol` | `Codex CLI` (`xhigh`) | **67.2** | 28.0 (73.7%) | 15 / 20 (75.0%) | 7/8 · 3/6 · 5/6 | 602s |
-| **8** | `openai/gpt-6-astra` | `Codex CLI` (`xhigh`) | **65.0** | 27.0 (71.1%) | 16 / 20 (80.0%) | 8/8 · **5/6** · 3/6 | 507s |
-| **9** | `openai/gpt-daybreak-blue-latest` | `Codex CLI` (`xhigh`) | **64.6** | 27.0 (71.1%) | 15 / 20 (75.0%) | 7/8 · 4/6 · 4/6 | 637s |
-| **10** | `deepseek/deepseek-flash[1m]` | `Claude Code` (`max`) | **62.2** | 26.0 (68.4%) | 15 / 20 (75.0%) | 8/8 · 3/6 · 4/6 | 596s |
-| **11** | `zai/GLM-5.3` | `Claude Code` (`max`) | **51.3** | 21.0 (55.3%) | 13 / 20 (65.0%) | 8/8 · 2/6 · 3/6 | 918s |
-| **12** | `anthropic/claude-opus-4-8[1m]` | `Claude Code` (`xhigh`) | **34.7** | 15.0 (39.5%) | 9 / 20 (45.0%) | 5/8 · 2/6 · 2/6 | 1,188s |
+| **1** | **`anthropic/claude-opus-5-5[1m]`** | `Claude Code` (`xhigh`) | **87.2** | **34.0 (89.5%)** | **18 / 20 (90.0%)** | 8/8 · 4/6 · **6/6** | 1,366s |
+| **2** | **`anthropic/claude-fable-5-2[1m]`** | `Claude Code` (`xhigh`) | **81.3** | 32.0 (84.2%) | 17 / 20 (85.0%) | 7/8 · **5/6** · 5/6 | 1,698s |
+| **3** | **`openai/gpt-6.2-astra`** | `Codex CLI` (`xhigh`) | **76.3** | 31.0 (81.6%) | 17 / 20 (85.0%) | 8/8 · 4/6 · 5/6 | **440s** |
+| **4** | **`google/gemini-4-neon-xhigh`** | `Antigravity CLI` (`xhigh`) | **73.1** | 30.0 (78.9%) | 16 / 20 (80.0%) | 7/8 · 4/6 · 5/6 | 836s |
+| **5** | `openai/gpt-6.2-sol` | `Codex CLI` (`xhigh`) | **68.5** | 28.0 (73.7%) | 16 / 20 (80.0%) | 8/8 · 4/6 · 4/6 | 587s |
+| **6** | `google/gemini-4-carbon-high` | `Antigravity CLI` (`high`) | **68.1** | 28.0 (73.7%) | 14 / 20 (70.0%) | 5/8 · 4/6 · 5/6 | 1,208s |
+| **7** | `openai/gpt-6-sol` | `Codex CLI` (`xhigh`) | **67.4** | 28.0 (73.7%) | 15 / 20 (75.0%) | 7/8 · 3/6 · 5/6 | 603s |
+| **8** | `openai/gpt-6-astra` | `Codex CLI` (`xhigh`) | **65.1** | 27.0 (71.1%) | 16 / 20 (80.0%) | 8/8 · **5/6** · 3/6 | 508s |
+| **9** | `openai/gpt-daybreak-blue-latest` | `Codex CLI` (`xhigh`) | **65.0** | 27.0 (71.1%) | 15 / 20 (75.0%) | 7/8 · 4/6 · 4/6 | 637s |
+| **10** | `deepseek/deepseek-flash[1m]` | `Claude Code` (`max`) | **62.1** | 26.0 (68.4%) | 15 / 20 (75.0%) | 8/8 · 3/6 · 4/6 | 596s |
+| **11** | `zai/GLM-5.3` | `Claude Code` (`max`) | **50.9** | 21.0 (55.3%) | 13 / 20 (65.0%) | 8/8 · 2/6 · 3/6 | 919s |
+| **12** | `zai/GLM-5.4` | `Claude Code` (`max`) | **43.6** | 19.0 (50.0%) | 12 / 20 (60.0%) | 7/8 · 3/6 · 2/6 | 3,530s |
+| **13** | `anthropic/claude-opus-4-8[1m]` | `Claude Code` (`xhigh`) | **34.0** | 15.0 (39.5%) | 9 / 20 (45.0%) | 5/8 · 2/6 · 2/6 | 1,189s |
 
 完整单题矩阵、信息熵加权、帕累托前沿图及安全护栏对比请访问在线仪表盘：**[https://fuqiuluo.github.io/VulnHunter/](https://fuqiuluo.github.io/VulnHunter/)**。
 
@@ -45,11 +46,11 @@
 
 ## 三、 20 道赛题分阶清单
 
-| 分阶 | 题量 | 覆盖语言与代表赛题 | 12 模型平均通过率 |
+| 分阶 | 题量 | 覆盖语言与代表赛题 | 13 模型平均通过率 |
 | :--- | :---: | :--- | :---: |
-| **Tier-1 基础真题** | 8 题 | `c-cmdstream-sequencer`、`c-session-broker`、`c-telemetry-parser`、`c-vm-mmu`、`cpp-frame-compositor`、`java-base64-decoder`、`py-flow-studio`、`py-webhook-preview` | **89.6%** (86/96) |
-| **Tier-2 高难多缺陷** | 6 题 | `c-ike-key-schedule` *(1/12)*、`c-query-agg-engine`、`cpp-quic-stream-mux`、`py-wal-kv-store`、`rs-chunked-deque`、`ts-edge-gateway-auth` | **61.1%** (44/72) |
-| **Tier-3 深水区四缺陷** | 6 题 | `c-ebpf-verifier-sandbox`、`cpp-http2-hpack-framer`、`java-jwk-federation-guard`、`py-wasm-aot-validator`、`rs-mvcc-ssi-engine` *(2/12)*、`ts-graphql-federation-planner` | **70.8%** (51/72) |
+| **Tier-1 基础真题** | 8 题 | `c-cmdstream-sequencer`、`c-session-broker`、`c-telemetry-parser`、`c-vm-mmu`、`cpp-frame-compositor`、`java-base64-decoder`、`py-flow-studio`、`py-webhook-preview` | **89.4%** (93/104) |
+| **Tier-2 高难多缺陷** | 6 题 | `c-ike-key-schedule` *(1/13)*、`c-query-agg-engine`、`cpp-quic-stream-mux`、`py-wal-kv-store`、`rs-chunked-deque`、`ts-edge-gateway-auth` | **60.3%** (47/78) |
+| **Tier-3 深水区四缺陷** | 6 题 | `c-ebpf-verifier-sandbox`、`cpp-http2-hpack-framer`、`java-jwk-federation-guard`、`py-wasm-aot-validator`、`rs-mvcc-ssi-engine` *(2/13)*、`ts-graphql-federation-planner` | **67.9%** (53/78) |
 
 ---
 

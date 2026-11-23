@@ -55,6 +55,8 @@ DEFAULT_JOB_DIRS: tuple[str, ...] = (
     "jobs/vulnhunter-20tasks-expansion",
     "jobs/vulnhunter-20tasks-rerun",
     "jobs/vulnhunter-5400s-recall",
+    "jobs/vulnhunter-glm-5.4-20tasks",
+    "jobs/vulnhunter-glm-5.4-rerun",
 )
 
 LANG_MAP: dict[str, str] = {
@@ -221,6 +223,8 @@ def load_merged_trials(job_dirs: tuple[str, ...]) -> tuple[dict[tuple[str, str],
                 status = "safety_refusal"
             elif exc_type == "AgentTimeoutError":
                 status = "timeout"
+            elif exc_type == "UnknownApiError":
+                status = "api_error"
             else:
                 status = "fail"
 

@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <meta name="color-scheme" content="light dark" />
   <title>VulnHunter Leaderboard · Zero-Hint Defensive Security Audit Benchmark</title>
-  <meta name="description" content="Interactive difficulty-weighted leaderboard for VulnHunter: 20 zero-hint defensive code audit & hardening tasks across 12 vendor-official CLI agent models (240 Harbor Docker trials)." />
+  <meta name="description" content="Interactive difficulty-weighted leaderboard for VulnHunter: 20 zero-hint defensive code audit & hardening tasks across 13 vendor-official CLI agent models (260 Harbor Docker trials)." />
   <script>
     // Apply a saved theme choice before first paint; otherwise the OS setting wins.
     try {
@@ -22,12 +22,12 @@
     <div class="container nav-inner">
       <a class="brand" href="#top">
         <span class="brand-name">VulnHunter</span>
-        <span class="brand-meta">v1.0 · 240 trials</span>
+        <span class="brand-meta" id="brand-meta">v1.0 · 260 trials</span>
       </a>
       <nav class="nav-links">
         <a href="#leaderboard" data-i18n="nav_leaderboard">综合加权榜</a>
         <a href="#analytics" data-i18n="nav_analytics">帕累托与难度分布</a>
-        <a href="#matrix" data-i18n="nav_matrix">20×12 完整矩阵</a>
+        <a href="#matrix" data-i18n="nav_matrix">20×13 完整矩阵</a>
         <a href="#insights" data-i18n="nav_insights">核心洞察</a>
       </nav>
       <div class="nav-actions">
@@ -43,7 +43,7 @@
     <section class="hero">
       <h1 data-i18n="hero_title">VulnHunter 零提示主动安全审计评测总榜</h1>
       <p class="hero-sub" data-i18n="hero_sub">
-        基于 Harbor 隔离容器沙箱驱动厂商官方 CLI Harness（Claude Code / Codex CLI / Antigravity CLI），在完全无漏洞提示（Zero-Hint）、断网与禁搜隔离条件下，检验 12 款前沿模型对 20 个真实多语言系统工程（C / C++ / Rust / Java / Python / TypeScript）的深度代码审查、耦合缺陷定位与原地加固能力。
+        基于 Harbor 隔离容器沙箱驱动厂商官方 CLI Harness（Claude Code / Codex CLI / Antigravity CLI），在完全无漏洞提示（Zero-Hint）、断网与禁搜隔离条件下，检验 13 款前沿模型对 20 个真实多语言系统工程（C / C++ / Rust / Java / Python / TypeScript）的深度代码审查、耦合缺陷定位与原地加固能力。
       </p>
       <div class="stat-strip" id="kpi-grid"></div>
     </section>
@@ -72,7 +72,7 @@
     <section id="leaderboard" class="section">
       <div class="section-header">
         <div>
-          <h2 data-i18n="sec_lb_title">1. 加权综合排行榜（12 Models × 20 Tasks）</h2>
+          <h2 data-i18n="sec_lb_title">1. 加权综合排行榜（13 Models × 20 Tasks）</h2>
           <p class="section-desc" data-i18n="sec_lb_desc">点击表头可自定义排序；★ 徽章表示攻克了全榜仅 1～2 款模型通过的皇冠级稀缺赛题（c-ike-key-schedule / rs-mvcc-ssi-engine）。</p>
         </div>
         <div class="legend-row">
@@ -109,7 +109,7 @@
       <div class="section-header">
         <div>
           <h2 data-i18n="sec_ana_title">2. 速度×加权得分帕累托前沿 &amp; 20 题实测难度分布</h2>
-          <p class="section-desc" data-i18n="sec_ana_desc">左侧直观展示推理深度与响应延迟的帕累托边界，右侧按 12 模型实测通过率由难至易排列所有赛题与当前权重。</p>
+          <p class="section-desc" data-i18n="sec_ana_desc">左侧直观展示推理深度与响应延迟的帕累托边界，右侧按全榜模型实测通过率由难至易排列所有赛题与当前权重。</p>
         </div>
       </div>
       <div class="charts-grid">
@@ -134,7 +134,7 @@
     <section id="matrix" class="section">
       <div class="section-header">
         <div>
-          <h2 data-i18n="sec_mat_title">3. 20 赛题 × 12 模型完整评测热力矩阵</h2>
+          <h2 data-i18n="sec_mat_title">3. 20 赛题 × 13 模型完整评测热力矩阵</h2>
           <p class="section-desc" data-i18n="sec_mat_desc">行为赛题（按难度分阶分组），列为模型（按当前加权排名）；可按分阶与语言筛选，悬停任意单元格查看精确耗时、源码规模（LOC）、CWE 标签与当前权重。</p>
         </div>
       </div>

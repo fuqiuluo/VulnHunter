@@ -5,11 +5,11 @@
     zh: {
       nav_leaderboard: "综合加权榜",
       nav_analytics: "帕累托与难度分布",
-      nav_matrix: "20×12 完整矩阵",
+      nav_matrix: ({ tasks, models }) => `${tasks}×${models} 完整矩阵`,
       nav_insights: "核心洞察",
       hero_title: "VulnHunter 零提示主动安全审计评测总榜",
-      hero_sub:
-        "基于 Harbor 隔离容器沙箱驱动厂商官方 CLI Harness（Claude Code / Codex CLI / Antigravity CLI），在完全无漏洞提示（Zero-Hint）、断网与禁搜隔离条件下，检验 12 款前沿模型对 20 个真实多语言系统工程（C / C++ / Rust / Java / Python / TypeScript）的深度代码审查、耦合缺陷定位与原地加固能力。",
+      hero_sub: ({ tasks, models }) =>
+        `基于 Harbor 隔离容器沙箱驱动厂商官方 CLI Harness（Claude Code / Codex CLI / Antigravity CLI），在完全无漏洞提示（Zero-Hint）、断网与禁搜隔离条件下，检验 ${models} 款前沿模型对 ${tasks} 个真实多语言系统工程（C / C++ / Rust / Java / Python / TypeScript）的深度代码审查、耦合缺陷定位与原地加固能力。`,
       scheme_combined: "综合难度加权 Tier×(2−p)",
       scheme_tier: "分阶权重 1:2:3",
       scheme_info: "信息熵权重 1−log₂p",
@@ -18,7 +18,7 @@
       leg_t1: "Tier-1 基础 (8题)",
       leg_t2: "Tier-2 多缺陷 (6题)",
       leg_t3: "Tier-3 深水区四缺陷 (6题)",
-      sec_lb_title: "1. 加权综合排行榜（12 Models × 20 Tasks）",
+      sec_lb_title: ({ tasks, models }) => `1. 加权综合排行榜（${models} Models × ${tasks} Tasks）`,
       sec_lb_desc:
         "点击表头可自定义排序；★ 徽章表示攻克了全榜仅 1～2 款模型通过的皇冠级稀缺赛题（c-ike-key-schedule / rs-mvcc-ssi-engine）。",
       th_model: "模型 / 厂商",
@@ -29,11 +29,11 @@
       th_tiers: "T1 / T2 / T3",
       th_avg: "通过均耗时",
       sec_ana_title: "2. 速度×加权得分帕累托前沿 & 20 题实测难度分布",
-      sec_ana_desc:
-        "左侧直观展示推理深度与响应延迟的帕累托边界，右侧按 12 模型实测通过率由难至易排列所有赛题与当前权重。",
+      sec_ana_desc: ({ models }) =>
+        `左侧直观展示推理深度与响应延迟的帕累托边界，右侧按 ${models} 款模型实测通过率由难至易排列所有赛题与当前权重。`,
       pareto_title: "速度 × 加权得分帕累托图",
       hard_title: "20 题实测通过率与当前权重",
-      sec_mat_title: "3. 20 赛题 × 12 模型完整评测热力矩阵",
+      sec_mat_title: ({ tasks, models }) => `3. ${tasks} 赛题 × ${models} 模型完整评测热力矩阵`,
       sec_mat_desc:
         "行为赛题（按难度分阶分组），列为模型（按当前加权排名）；可按分阶与语言筛选，悬停任意单元格查看精确耗时、源码规模（LOC）、CWE 标签与当前权重。",
       sec_ins_title: "4. 核心架构洞察与评测规范说明",
@@ -42,9 +42,9 @@
       kpi_tasks: "零提示赛题总量",
       kpi_tasks_note: "8 一期 + 6 二期 + 6 三期四缺陷",
       kpi_models: "官方 CLI 参评模型",
-      kpi_models_note: "5 家主流厂商 · 240 隔离容器评测",
+      kpi_models_note: ({ vendors, trials }) => `${vendors} 家主流厂商 · ${trials} 隔离容器评测`,
       kpi_pass: "全矩阵综合通过率",
-      kpi_pass_note: "T1 89.6% · T2 61.1% · T3 70.8%",
+      kpi_pass_note: ({ t1, t2, t3 }) => `T1 ${t1}% · T2 ${t2}% · T3 ${t3}%`,
       kpi_leader: "当前加权榜首",
       kpi_fastest: "帕累托极速旗舰",
       all_tiers: "全部难度",
@@ -53,6 +53,7 @@
       status_fail: "失败",
       status_timeout: "超时",
       status_refusal: "云端安全误拒",
+      status_api_error: "上游接口限流",
       ctl_weighting: "加权方式",
       pareto_x: "通过题均耗时（分钟）",
       pareto_y: "加权得分",
@@ -65,6 +66,7 @@
       col_weight: "权重",
       cell_timeout: "超时",
       cell_refusal: "拒答",
+      cell_api_error: "限流",
       legend_minutes: "格内数字为该次评测耗时（分钟）",
       max_weight: "最高权重",
       lbl_score: "加权得分",
@@ -74,14 +76,14 @@
       refusals: (n) => `误拒 ${n}`,
       tasks_n: (n) => `${n} 题`,
       formula_desc: {
-        combined:
-          '公式 <span class="formula-pill mono">wᵢ = Tierᵢ × (2 − pᵢ)</span>：兼顾分阶工程体量（1/2/3）与全榜实测稀缺度（pᵢ 为通过率），最高权重 rs-mvcc-ssi-engine = 5.50，12 模型实现零重分区分。',
-        tier:
+        combined: ({ models, maxCombTask, maxCombWeight }) =>
+          `公式 <span class="formula-pill mono">wᵢ = Tierᵢ × (2 − pᵢ)</span>：兼顾分阶工程体量（1/2/3）与全榜实测稀缺度（pᵢ 为通过率），最高权重 ${maxCombTask} = ${maxCombWeight}，${models} 款模型实现零重分区分。`,
+        tier: () =>
           '公式 <span class="formula-pill mono">wᵢ ∈ {1, 2, 3}</span>：Tier-1 基础题 1 分、Tier-2 多缺陷题 2 分、Tier-3 深水区四缺陷题 3 分，原始满分 38 分并折算为百分制。',
-        info:
-          '公式 <span class="formula-pill mono">wᵢ = 1 − log₂(pᵢ)</span>：纯按信息论惊奇度赋权，奖励攻克 c-ike-key-schedule（1/12，4.58 分）与 rs-mvcc-ssi-engine（2/12，3.58 分）等极难稀缺题。',
-        equal:
-          '公式 <span class="formula-pill mono">wᵢ = 1</span>：全部 20 道赛题等权计分（每题 5 分），直接反映整体通过题数比例。',
+        info: ({ models, ikePasses, ikeInfo, mvccPasses, mvccInfo }) =>
+          `公式 <span class="formula-pill mono">wᵢ = 1 − log₂(pᵢ)</span>：纯按信息论惊奇度赋权，奖励攻克 c-ike-key-schedule（${ikePasses}/${models}，${ikeInfo} 分）与 rs-mvcc-ssi-engine（${mvccPasses}/${models}，${mvccInfo} 分）等极难稀缺题。`,
+        equal: ({ tasks }) =>
+          `公式 <span class="formula-pill mono">wᵢ = 1</span>：全部 ${tasks} 道赛题等权计分（每题 ${(100 / tasks).toFixed(0)} 分），直接反映整体通过题数比例。`,
       },
       insights: [
         {
@@ -89,12 +91,12 @@
           body: "将单题 Agent 上限对齐 SEC-bench / CyberGym-E2E 的 5400s（90 分钟）后，claude-opus-5-5[1m] 在 2,131 行 C 抽象解释器 c-ebpf-verifier-sandbox 上耗时 3349s（55.8 分钟）满分通关，成为全场唯一横扫全部 6 道三期深水区真题的模型，以 18/20（综合加权 87.0 分）独占总榜第一。",
         },
         {
-          title: "速度与深度的帕累托前沿：gpt-6.2-astra 3.1 倍速差紧咬榜首",
-          body: "openai/gpt-6.2-astra 以 17/20（综合加权 76.1 分）稳居前三，但通过题均耗时仅 440s（总耗时 9,648s），比 Claude 5 系列快 3.1～3.9 倍；在 c-ebpf-verifier-sandbox 上 420s vs 3349s 快出整整 8 倍，形成清晰的速度-精度帕累托边界。",
+          title: "帕累托前沿与推理膨胀：极速旗舰 vs 90 分钟上限碰撞",
+          body: "openai/gpt-6.2-astra 以 17/20（综合加权 76.3 分）稳居前三，但通过题均耗时仅 440s（比 Claude 5 快 3.1～3.9 倍）；另一端 zai/GLM-5.4 在 max 档位下单题输出高达 120K–369K tokens（均耗时 3530s，较 GLM-5.3 慢 3.8 倍），虽以 T2 3/6 反超 GLM-5.3（2/6），但在 3 道 Tier-3 重型赛题上两次稳定撞上 5400s 超时墙。",
         },
         {
-          title: "跨家族正交盲区：三道皇冠题精准拉开架构代差",
-          body: "rs-mvcc-ssi-engine（2/12）上 OpenAI 全系 5 款与 Gemini 4 双雄集体漏掉 vacuum() 期间保留活跃枢纽事务冲突边的 Cahill SSI 规则，仅 Claude 5 双雄攻克；而 c-ike-key-schedule（1/12）的 RFC 9242 多轮乱序加密分片 IntAuth 累积不变量则由 zai/GLM-5.3 唯一攻克。",
+          title: "跨家族正交盲区：两道皇冠题精准拉开架构代差",
+          body: "rs-mvcc-ssi-engine（2/13）上 OpenAI 全系 5 款与 Gemini 4 双雄集体漏掉 vacuum() 期间保留活跃枢纽事务冲突边的 Cahill SSI 规则，仅 Claude 5 双雄攻克；而 c-ike-key-schedule（1/13）的 RFC 9242 多轮乱序加密分片 IntAuth 累积不变量则由 zai/GLM-5.3 唯一攻克。",
         },
         {
           title: "纯防御审计下的厂商安全护栏误拦截对比",
@@ -105,11 +107,11 @@
     en: {
       nav_leaderboard: "Leaderboard",
       nav_analytics: "Pareto & Difficulty",
-      nav_matrix: "20×12 Matrix",
+      nav_matrix: ({ tasks, models }) => `${tasks}×${models} Matrix`,
       nav_insights: "Insights",
       hero_title: "VulnHunter Zero-Hint Defensive Audit Leaderboard",
-      hero_sub:
-        "Evaluates 12 vendor-official CLI agent models (Claude Code, Codex CLI, Antigravity CLI) inside isolated, offline, web-search-disabled Harbor Docker containers across 20 multi-language systems engineering codebases (C, C++, Rust, Java, Python, TypeScript) under strict zero-hint defensive review.",
+      hero_sub: ({ tasks, models }) =>
+        `Evaluates ${models} vendor-official CLI agent models (Claude Code, Codex CLI, Antigravity CLI) inside isolated, offline, web-search-disabled Harbor Docker containers across ${tasks} multi-language systems engineering codebases (C, C++, Rust, Java, Python, TypeScript) under strict zero-hint defensive review.`,
       scheme_combined: "Combined Tier×(2−p)",
       scheme_tier: "Tier 1:2:3",
       scheme_info: "Shannon 1−log₂p",
@@ -118,9 +120,9 @@
       leg_t1: "Tier-1 Foundational (8)",
       leg_t2: "Tier-2 Multi-Defect (6)",
       leg_t3: "Tier-3 Deep-Water 4-Defect (6)",
-      sec_lb_title: "1. Difficulty-Weighted Grand Leaderboard (12 Models × 20 Tasks)",
-      sec_lb_desc:
-        "Click any column header to sort; ★ marks solvers of crown-jewel rare tasks passed by ≤ 2/12 models (c-ike-key-schedule / rs-mvcc-ssi-engine).",
+      sec_lb_title: ({ tasks, models }) => `1. Difficulty-Weighted Grand Leaderboard (${models} Models × ${tasks} Tasks)`,
+      sec_lb_desc: ({ models }) =>
+        `Click any column header to sort; ★ marks solvers of crown-jewel rare tasks passed by ≤ 2/${models} models (c-ike-key-schedule / rs-mvcc-ssi-engine).`,
       th_model: "Model / Provider",
       th_harness: "Official CLI (Effort)",
       th_weighted: "Weighted (/100)",
@@ -133,7 +135,7 @@
         "Left: efficiency-vs-depth Pareto frontier across providers. Right: all 20 tasks ordered from hardest to easiest with active weights.",
       pareto_title: "Latency × Weighted Score Pareto Frontier",
       hard_title: "Empirical Pass Rate & Active Task Weight",
-      sec_mat_title: "3. Interactive 20-Task × 12-Model Evaluation Matrix",
+      sec_mat_title: ({ tasks, models }) => `3. Interactive ${tasks}-Task × ${models}-Model Evaluation Matrix`,
       sec_mat_desc:
         "Rows are tasks grouped by tier; columns are models in current rank order. Filter by tier or language, and hover any cell for exact runtime, source LOC, CWE tags, and active weight.",
       sec_ins_title: "4. Key Architectural Findings & Benchmark Protocol",
@@ -142,9 +144,9 @@
       kpi_tasks: "Zero-Hint Tasks",
       kpi_tasks_note: "8 Tier-1 · 6 Tier-2 · 6 Tier-3",
       kpi_models: "Official CLI Models",
-      kpi_models_note: "5 Vendors · 240 Isolated Trials",
+      kpi_models_note: ({ vendors, trials }) => `${vendors} Vendors · ${trials} Isolated Trials`,
       kpi_pass: "Grand Pass Rate",
-      kpi_pass_note: "T1 89.6% · T2 61.1% · T3 70.8%",
+      kpi_pass_note: ({ t1, t2, t3 }) => `T1 ${t1}% · T2 ${t2}% · T3 ${t3}%`,
       kpi_leader: "Weighted Leader",
       kpi_fastest: "Pareto Speed Leader",
       all_tiers: "All Tiers",
@@ -153,6 +155,7 @@
       status_fail: "Fail",
       status_timeout: "Timeout",
       status_refusal: "Cloud safety refusal",
+      status_api_error: "Upstream API limit",
       ctl_weighting: "Weighting",
       pareto_x: "Average time per passed task (minutes)",
       pareto_y: "Weighted score",
@@ -165,6 +168,7 @@
       col_weight: "Weight",
       cell_timeout: "T/O",
       cell_refusal: "REF",
+      cell_api_error: "API",
       legend_minutes: "Numbers are that trial's runtime in minutes",
       max_weight: "Max weight",
       lbl_score: "Weighted score",
@@ -174,14 +178,14 @@
       refusals: (n) => `${n} ${n === 1 ? "refusal" : "refusals"}`,
       tasks_n: (n) => `${n} ${n === 1 ? "task" : "tasks"}`,
       formula_desc: {
-        combined:
-          'Formula <span class="formula-pill mono">wᵢ = Tierᵢ × (2 − pᵢ)</span>: combines structural task tier (1/2/3) with empirical scarcity (pᵢ = pass rate across 12 models). Top weight: rs-mvcc-ssi-engine (5.50). Eliminates all ties across the 12 models.',
-        tier:
+        combined: ({ models, maxCombTask, maxCombWeight }) =>
+          `Formula <span class="formula-pill mono">wᵢ = Tierᵢ × (2 − pᵢ)</span>: combines structural task tier (1/2/3) with empirical scarcity (pᵢ = pass rate across ${models} models). Top weight: ${maxCombTask} (${maxCombWeight}). Eliminates all ties across all ${models} models.`,
+        tier: () =>
           'Formula <span class="formula-pill mono">wᵢ ∈ {1, 2, 3}</span>: fixed 1 pt for Tier-1, 2 pts for Tier-2, 3 pts for Tier-3 (38 raw pts normalized to 100).',
-        info:
-          'Formula <span class="formula-pill mono">wᵢ = 1 − log₂(pᵢ)</span>: Shannon information surprisal weighting rewarding rare breakthroughs such as c-ike-key-schedule (1/12, 4.58) and rs-mvcc-ssi-engine (2/12, 3.58).',
-        equal:
-          'Formula <span class="formula-pill mono">wᵢ = 1</span>: uniform equal weighting across all 20 tasks (5 pts each).',
+        info: ({ models, ikePasses, ikeInfo, mvccPasses, mvccInfo }) =>
+          `Formula <span class="formula-pill mono">wᵢ = 1 − log₂(pᵢ)</span>: Shannon information surprisal weighting rewarding rare breakthroughs such as c-ike-key-schedule (${ikePasses}/${models}, ${ikeInfo}) and rs-mvcc-ssi-engine (${mvccPasses}/${models}, ${mvccInfo}).`,
+        equal: ({ tasks }) =>
+          `Formula <span class="formula-pill mono">wᵢ = 1</span>: uniform equal weighting across all ${tasks} tasks (${(100 / tasks).toFixed(0)} pts each).`,
       },
       insights: [
         {
@@ -189,12 +193,12 @@
           body: "Aligning the per-task budget to SEC-bench / CyberGym-E2E's 5400s (90m) standard allowed claude-opus-5-5[1m] to solve the 2,131-LOC C eBPF abstract interpreter in 3,349s (55.8m), achieving the benchmark's sole 6/6 Tier-3 sweep and undisputed #1 finish at 18/20 (87.0 weighted).",
         },
         {
-          title: "Speed-Depth Pareto Frontier: gpt-6.2-astra Is 3.1× Faster",
-          body: "openai/gpt-6.2-astra posts 17/20 (76.1 weighted) at just 440s average pass time (9,648s total)—over 3.1× faster than Opus 5.5 and 8× faster on c-ebpf-verifier-sandbox (420s vs 3,349s).",
+          title: "Pareto Speed Frontier vs. Reasoning-Token Inflation",
+          body: "openai/gpt-6.2-astra posts 17/20 (76.3 weighted) at just 440s average pass time (3.1–3.9× faster than Claude 5). At the opposite extreme, zai/GLM-5.4 at max effort emitted 120K–369K output tokens per task (3,530s avg pass, 3.8× slower than GLM-5.3): it surpassed GLM-5.3 on Tier-2 (3/6 vs 2/6) but repeatedly hit the 5400s ceiling on 3 heavy Tier-3 tasks.",
         },
         {
           title: "Orthogonal Cross-Family Blind Spots Separate Top Models",
-          body: "All 5 OpenAI models and both Gemini 4 models hit the exact same Cahill SSI vacuum() pivot-retention defect in rs-mvcc-ssi-engine (2/12, solved solely by Claude 5), whereas zai/GLM-5.3 was the sole solver (1/12) of the RFC 9242 out-of-order fragmented IKEv2 key schedule.",
+          body: "All 5 OpenAI models and both Gemini 4 models hit the exact same Cahill SSI vacuum() pivot-retention defect in rs-mvcc-ssi-engine (2/13, solved solely by Claude 5), whereas zai/GLM-5.3 was the sole solver (1/13) of the RFC 9242 out-of-order fragmented IKEv2 key schedule.",
         },
         {
           title: "Defensive Audit Availability Under Vendor Safety Filters",
@@ -222,8 +226,42 @@
   // The latest computed leaderboard, read by the delegated hover handlers.
   let view = { canonical: [], weights: [] };
 
-  function t(key) {
-    return I18N[state.lang][key] || key;
+  function getStatsContext() {
+    const { benchmark: b, tasks, models } = state.data;
+    const vendors = new Set(models.map((m) => m.provider_key)).size;
+    const tierPct = (tier) => {
+      const idxs = tasks.map((tk, i) => (tk.tier === tier ? i : -1)).filter((i) => i >= 0);
+      const passed = models.reduce(
+        (acc, m) => acc + idxs.reduce((a, i) => a + (m.results[i].passed ? 1 : 0), 0),
+        0
+      );
+      return ((passed / Math.max(1, idxs.length * models.length)) * 100).toFixed(1);
+    };
+    const combWeights = tasks.map((tk) => taskWeight(tk, "combined"));
+    const maxCombIdx = combWeights.indexOf(Math.max(...combWeights));
+    const ike = tasks.find((tk) => tk.id === "c-ike-key-schedule") || tasks[0];
+    const mvcc = tasks.find((tk) => tk.id === "rs-mvcc-ssi-engine") || tasks[0];
+    return {
+      tasks: b.total_tasks,
+      models: b.total_models,
+      trials: b.total_trials,
+      vendors,
+      t1: tierPct(1),
+      t2: tierPct(2),
+      t3: tierPct(3),
+      maxCombTask: tasks[maxCombIdx].id,
+      maxCombWeight: combWeights[maxCombIdx].toFixed(2),
+      ikePasses: ike.passes,
+      ikeInfo: taskWeight(ike, "info").toFixed(2),
+      mvccPasses: mvcc.passes,
+      mvccInfo: taskWeight(mvcc, "info").toFixed(2),
+    };
+  }
+
+  function t(key, ctx) {
+    const val = I18N[state.lang][key];
+    if (typeof val === "function") return ctx !== undefined ? val(ctx) : val;
+    return val || key;
   }
 
   function esc(value) {
@@ -399,12 +437,15 @@
 
   // ── Rendering ─────────────────────────────────────────────────────────────
 
-  function applyI18n() {
+  function applyI18n(ctx = getStatsContext()) {
     document.documentElement.lang = state.lang === "zh" ? "zh-CN" : "en";
     document.querySelectorAll("[data-i18n]").forEach((el) => {
       const k = el.dataset.i18n;
-      if (I18N[state.lang][k]) el.textContent = I18N[state.lang][k];
+      const val = I18N[state.lang][k];
+      if (val) el.textContent = typeof val === "function" ? val(ctx) : val;
     });
+    const bm = document.getElementById("brand-meta");
+    if (bm) bm.textContent = `v1.0 · ${ctx.trials} trials`;
     // Both toggles are labelled with what they switch to.
     document.getElementById("lang-toggle").textContent = state.lang === "zh" ? "English" : "中文";
     document.getElementById("theme-toggle").textContent =
@@ -421,7 +462,7 @@
     });
   }
 
-  function renderKPIs(canonical) {
+  function renderKPIs(canonical, ctx) {
     const b = state.data.benchmark;
     const leader = canonical[0];
     const fastest = [...canonical]
@@ -431,12 +472,12 @@
     const passPct = ((b.total_passed / b.total_trials) * 100).toFixed(1);
     const cards = [
       { label: t("kpi_tasks"), val: `${b.total_tasks}`, note: t("kpi_tasks_note") },
-      { label: t("kpi_models"), val: `${b.total_models}`, note: t("kpi_models_note") },
+      { label: t("kpi_models"), val: `${b.total_models}`, note: t("kpi_models_note", ctx) },
       {
         label: t("kpi_pass"),
         val: `${passPct}%`,
         unit: `${b.total_passed}/${b.total_trials}`,
-        note: t("kpi_pass_note"),
+        note: t("kpi_pass_note", ctx),
       },
       {
         label: t("kpi_leader"),
@@ -568,10 +609,10 @@
       <span class="legend-item"><span class="legend-swatch dot" style="background:var(--dim-mark)"></span>${t("leg_dominated")}</span>`;
 
     const W = 680, H = 540, padL = 40, padR = 16, padT = 30, padB = 46;
-    const X_STEP = 300; // seconds; ticks every 5 minutes
-    const Y_STEP = 10;
     const times = canonical.map((r) => r.avgSec);
     const scores = canonical.map((r) => r.score);
+    const X_STEP = Math.max(...times) > 2400 ? 600 : 300; // ticks every 10m if any model > 40m, else 5m
+    const Y_STEP = 10;
     const minX = Math.max(0, Math.floor((Math.min(...times) - 60) / X_STEP) * X_STEP);
     const maxX = Math.ceil((Math.max(...times) + 60) / X_STEP) * X_STEP;
     const minY = Math.max(0, Math.floor((Math.min(...scores) - 2) / Y_STEP) * Y_STEP);
@@ -821,6 +862,9 @@
       } else if (res.status === "safety_refusal") {
         cls = "is-refusal";
         text = t("cell_refusal");
+      } else if (res.status === "api_error") {
+        cls = "is-refusal";
+        text = t("cell_api_error");
       }
       const label = `${m.short}, ${tk.id}: ${statusText(res.status)}, ${fmtDur(res.duration_sec)}`;
       return `<td class="mx-cell ${cls}" data-m-idx="${mIdx}" data-t-idx="${i}" aria-label="${esc(label)}">${esc(text)}</td>`;
@@ -851,11 +895,13 @@
     // where the cell text already says it (zh "超时").
     const item = (tint, cellText, name) =>
       `<span class="legend-item"><span class="legend-swatch glyph num" style="background:var(--${tint}-tint)">${esc(cellText)}</span>${cellText === name ? "" : esc(name)}</span>`;
+    const hasApiError = canonical.some((m) => m.results.some((r) => r.status === "api_error"));
     document.getElementById("matrix-legend").innerHTML =
       item("pass", "12", t("status_pass")) +
       item("fail", "×", t("status_fail")) +
       item("timeout", t("cell_timeout"), t("status_timeout")) +
       item("refusal", t("cell_refusal"), t("status_refusal")) +
+      (hasApiError ? item("refusal", t("cell_api_error"), t("status_api_error")) : "") +
       `<span class="legend-note">${esc(t("legend_minutes"))}</span>`;
   }
 
@@ -876,19 +922,21 @@
 
   function renderAll() {
     hideTip();
-    applyI18n();
+    const ctx = getStatsContext();
+    applyI18n(ctx);
     document.querySelectorAll("#scheme-buttons button").forEach((b) => {
       const isActive = b.dataset.scheme === state.scheme;
       b.classList.toggle("active", isActive);
       b.setAttribute("aria-pressed", String(isActive));
     });
+    const formulaFn = I18N[state.lang].formula_desc[state.scheme];
     document.getElementById("formula-desc").innerHTML =
-      I18N[state.lang].formula_desc[state.scheme];
+      typeof formulaFn === "function" ? formulaFn(ctx) : formulaFn;
 
     const { rows, canonical, weights } = computeLeaderboard();
     view = { canonical, weights };
     renderSortState();
-    renderKPIs(canonical);
+    renderKPIs(canonical, ctx);
     renderLeaderboard(rows);
     renderPareto(canonical);
     renderHardness(weights);
